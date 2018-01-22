@@ -148,7 +148,10 @@ func (c *Conn) WritePump() {
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)
-			c.log("There are ", n, " messages yet to send")
+
+			if n != 0 {
+				c.log("There are ", n, " messages yet to send")
+			}
 			var i int
 			for i = 0; i < n; i++ {
 				if err = c.ws.WriteMessage(websocket.TextMessage, <-c.send); err != nil {

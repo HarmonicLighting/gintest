@@ -5,6 +5,16 @@ import (
 	"errors"
 )
 
+type BroadcastHandle func([]byte)
+
+type CommandType int
+
+const (
+	PIDListCommand CommandType = iota
+	PIDUpdateCommand
+	NCurrentClientsCommand
+)
+
 type CommandResponse struct {
 	Response []byte
 	Err      error
@@ -24,20 +34,20 @@ func NewCommandRequest(command CommandType, data []byte) CommandRequest {
 	return CommandRequest{Command: command, Data: data, Response: make(chan CommandResponse)}
 }
 
-type CommandType int
-
-const (
-	PIDListCommand CommandType = iota
-	PIDUpdateCommand
-)
-
 type Command interface {
 	Stringify() ([]byte, string)
 	Parse(data []byte) error
 }
 
-type EventCommand struct {
+type CommandHeader struct {
 	Command CommandType `json:"command"`
+}
+
+// TO-IMPLEMENT
+type CommandResponseHeader struct {
+	Command CommandType `json:"command"`
+	Status  int         `json:"status"`
+	Error   string      `json:"error"`
 }
 
 type ApiPid struct {
@@ -50,24 +60,24 @@ func NewApiPID(name string, index int, period float32) ApiPid {
 	return ApiPid{Name: name, Index: index, Period: period}
 }
 
-type PIDListEvent struct {
-	EventCommand
+type PIDListResponse struct {
+	CommandHeader
 	List []ApiPid `json:"pids"`
 }
 
-func NewPIDListEvent(list []ApiPid) PIDListEvent {
-	return PIDListEvent{EventCommand: EventCommand{Command: PIDListCommand}, List: list}
+func NewPIDListResponse(list []ApiPid) PIDListResponse {
+	return PIDListResponse{CommandHeader: CommandHeader{Command: PIDListCommand}, List: list}
 }
 
-func (e PIDListEvent) Stringify() ([]byte, error) {
-	return json.Marshal(e)
+func (r PIDListResponse) Stringify() ([]byte, error) {
+	return json.Marshal(r)
 }
 
-func (e *PIDListEvent) Parse(data []byte) error {
+func (r *PIDListResponse) Parse(data []byte) error {
 	if !json.Valid(data) {
 		return errors.New("The data to parse is not a valid JSON encoding")
 	}
-	return json.Unmarshal(data, e)
+	return json.Unmarshal(data, r)
 }
 
 type ApiUpdate struct {
@@ -76,22 +86,46 @@ type ApiUpdate struct {
 	Value     float32 `json:"value"`
 }
 
-type PIDUpdateEvent struct {
-	EventCommand
+type PIDUpdateResponse struct {
+	CommandHeader
 	ApiUpdate
 }
 
-func NewPIDUpdateEvent(index int, timestamp int64, value float32) PIDUpdateEvent {
-	return PIDUpdateEvent{EventCommand: EventCommand{Command: PIDUpdateCommand}, ApiUpdate: ApiUpdate{Index: index, Timestamp: timestamp, Value: value}}
+func NewPIDUpdateResponse(index int, timestamp int64, value float32) PIDUpdateResponse {
+	return PIDUpdateResponse{CommandHeader: CommandHeader{Command: PIDUpdateCommand}, ApiUpdate: ApiUpdate{Index: index, Timestamp: timestamp, Value: value}}
 }
 
-func (e *PIDUpdateEvent) Stringify() ([]byte, error) {
-	return json.Marshal(e)
+func (r *PIDUpdateResponse) Stringify() ([]byte, error) {
+	return json.Marshal(r)
 }
 
-func (e *PIDUpdateEvent) Parse(data []byte) error {
+func (r *PIDUpdateResponse) Parse(data []byte) error {
 	if !json.Valid(data) {
 		return errors.New("The data to parse is not a valid JSON encoding")
 	}
-	return json.Unmarshal(data, e)
+	return json.Unmarshal(data, r)
+}
+
+type ApiNClients struct {
+	Number int `json:"number"`
+}
+
+type NCurrentClientsResponse struct {
+	CommandHeader
+	ApiNClients
+}
+
+func NewNCurrentClientsResponse(nClients int) NCurrentClientsResponse {
+	return NCurrentClientsResponse{CommandHeader: CommandHeader{Command: NCurrentClientsCommand}, ApiNClients: ApiNClients{Number: nClients}}
+}
+
+func (r *NCurrentClientsResponse) Stringify() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+func (r *NCurrentClientsResponse) Parse(data []byte) error {
+	if !json.Valid(data) {
+		return errors.New("The data to parse is not a valid JSON encoding")
+	}
+	return json.Unmarshal(data, r)
 }

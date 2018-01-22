@@ -4,7 +4,7 @@ import (
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 
-	"local/gintest/pid/controllers/ws"
+	"local/gintest/controllers/ws"
 )
 
 func main() {

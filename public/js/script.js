@@ -28,7 +28,7 @@ socket.onmessage = function(event) {
       refreshValues(message)
       break;
     default:
-      console.warn("The object returned "+message.type);
+      console.warn("Unknown Command "+message.command);
   }
 }
 
@@ -36,7 +36,7 @@ socket.onmessage = function(event) {
 var refreshValues = function(event) {
   var dt = new Date(event.timestamp/1000000);
   $(`#svalue-${event.index}`).html(`${event.value}`);
-  $(`#sdate-${event.index}`).html(`On ${dt} -> ${event.timestamp}`);
+  $(`#sdate-${event.index}`).html(`On ${dt}`);
 }
 
 // Refresh the signals
@@ -55,12 +55,11 @@ var refreshSignals = function(signals){
     var signalsArea = $('#pids-data')
     signalsArea.empty();
     for (var i = 0; i < signals.length; i++) {
-      //signalsArea.append(`<div class='col-md-4'><b>${signals[i].name}</b> (${signals[i].period / 1000000} ms):</div><div class='col-sm-3' id='s-${signals[i].index}'></div><div class='col-sm-6' id='ss-${signals[i].index}'></div>`)
       signalsArea.append(
         `
         <div class='row'>
           <div class='col-sm-3'>
-            <b>${signals[i].name}</b> (${signals[i].period / 1000000} ms):
+            <b>${signals[i].name}</b> (${signals[i].period / 1000000000} s):
           </div>
           <div class='col-sm-2' id='svalue-${signals[i].index}'>
           </div>
@@ -72,14 +71,4 @@ var refreshSignals = function(signals){
         `
       );
     }
-
   }
-
-var exampleSocket = new WebSocket("ws://"+window.location.host+"/ws");
-
-
-exampleSocket.onmessage = function (event) {
-  var obj = JSON.parse(event.data)
-  console.log(event.data);
-  console.log(obj);
-}
