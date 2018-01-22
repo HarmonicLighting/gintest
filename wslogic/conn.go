@@ -140,11 +140,12 @@ func (c *Conn) WritePump() {
 			}
 
 			c.ws.SetWriteDeadline(time.Now().Add(writeWait))
-			//w, err := c.ws.NextWriter(websocket.TextMessage)
-			//if err != nil {
-			//	return
-			//}
+
 			err := c.ws.WriteMessage(websocket.TextMessage, message)
+			if err != nil {
+				c.log("Error writing a first message: ", err.Error())
+				return
+			}
 
 			// Add queued chat messages to the current websocket message.
 			n := len(c.send)

@@ -20,6 +20,10 @@ socket.onmessage = function(event) {
   updateLastDate(dt)
 
   var message = JSON.parse(event.data)
+
+  console.log(message);
+
+
   switch (message.command) {
     case 0:
       refreshSignals(message.pids)

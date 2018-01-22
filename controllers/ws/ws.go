@@ -24,5 +24,5 @@ func ServeWs(w http.ResponseWriter, r *http.Request) {
 	conn := wslogic.NewConn(ws) //&Conn{send: make(chan []byte, 256), ws: ws}
 	wslogic.Register(conn)      //hub.register <- conn
 	go conn.WritePump()
-	conn.ReadPump()
+	go conn.ReadPump()
 }
