@@ -107,8 +107,7 @@ func (c *Conn) ReadPump() {
 			}
 			break
 		}
-		//log.Println("Broadcasting the message received")
-		//hub.broadcast <- message
+
 		c.log("Sending the incoming message to be handled")
 		processClientMessage(newClientMessage(c, message))
 	}
@@ -139,15 +138,13 @@ func (c *Conn) WritePump() {
 				return
 			}
 
-			c.ws.SetWriteDeadline(time.Now().Add(writeWait))
-
-			err := c.ws.WriteMessage(websocket.TextMessage, message)
+			err := c.write(websocket.TextMessage, message)
 			if err != nil {
 				c.log("Error writing a first message: ", err.Error())
 				return
 			}
 
-			// Add queued chat messages to the current websocket message.
+			// Send queued messages to the client.
 			n := len(c.send)
 
 			if n != 0 {
@@ -155,7 +152,7 @@ func (c *Conn) WritePump() {
 			}
 			var i int
 			for i = 0; i < n; i++ {
-				if err = c.ws.WriteMessage(websocket.TextMessage, <-c.send); err != nil {
+				if err = c.write(websocket.TextMessage, <-c.send); err != nil { //c.ws.WriteMessage(websocket.TextMessage, <-c.send); err != nil {
 					c.log("Error writing queued message: ", err.Error())
 					return
 				}

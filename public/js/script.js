@@ -82,3 +82,11 @@ var refreshSignals = function(signals){
       );
     }
   }
+
+  var requestCommand = function(command){
+    obj = {command: command}
+    string = JSON.stringify(obj)
+    console.log("Sending command ",command);
+    console.log(string);
+    socket.send(string)
+  }

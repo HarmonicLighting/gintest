@@ -14,9 +14,6 @@ import (
 // Hub maintains the set of active connections and broadcasts messages to the
 // connections.
 type Hub struct {
-	// Registered connections.
-	//connectionsMap  map[int32]*Conn
-	//connectionsPool *list.List
 
 	// Messages to broadcast to all the connections
 	broadcast chan []byte
@@ -37,9 +34,10 @@ type Hub struct {
 var hub = Hub{
 	incomingMessage: make(chan clientMessage),
 
-	broadcast:                      make(chan []byte),
-	register:                       make(chan *Conn),
-	unregister:                     make(chan *Conn),
+	broadcast:  make(chan []byte),
+	register:   make(chan *Conn),
+	unregister: make(chan *Conn),
+
 	incomingNCurrentClientsCommand: make(chan constants.CommandRequest),
 }
 
@@ -121,7 +119,7 @@ func (h *Hub) BroadcastMessage(message []byte, connectionsList *list.List, conne
 		case e.Value.(*Conn).send <- message:
 
 		default:
-			h.log("Removing a connection inside default (client message queue full)")
+			h.log("Removing connection ", e.Value.(Conn).connID, ", unable to broadcast (client message queue full)")
 			close(e.Value.(*Conn).send)
 			err := h.removeConnection(e.Value.(*Conn), connectionsList, connectionsMap)
 			if err != nil {
@@ -131,19 +129,18 @@ func (h *Hub) BroadcastMessage(message []byte, connectionsList *list.List, conne
 	}
 }
 
-func (h *Hub) runClientMessageHandler() {
+func (h *Hub) runClientsMessageHandler() {
 
-	for {
-		clientMessage := <-h.incomingMessage
-		// Handle the client message Here
-		var cmm constants.CommandHeader
+	for clientMessage := range h.incomingMessage {
+
+		var cmm constants.CommandRequestHeader
 		err := json.Unmarshal(clientMessage.message, &cmm)
 		if err != nil {
 			h.log("Error unmarshalling the event command ", string(clientMessage.message), ": ", err)
 		} else {
 			switch cmm.Command {
-			case constants.PIDListCommand:
-				rc := constants.NewCommandRequest(constants.PIDListCommand, clientMessage.message)
+			case constants.PIDListCommandRequest:
+				rc := constants.NewCommandRequest(cmm.Command, clientMessage.message)
 				response := pid.RequestCommand(rc)
 				if response.Err != nil {
 					h.log("Error processing the command ", string(clientMessage.message), " for client ", clientMessage.conn.connID, ": ", response.Err)
@@ -153,8 +150,8 @@ func (h *Hub) runClientMessageHandler() {
 					clientMessage.conn.send <- response.Response
 				}
 
-			case constants.NCurrentClientsCommand:
-				rc := constants.NewCommandRequest(constants.NCurrentClientsCommand, clientMessage.message)
+			case constants.NCurrentClientsCommandRequest:
+				rc := constants.NewCommandRequest(cmm.Command, clientMessage.message)
 				response := h.requestNCurrentClientsCommand(rc)
 				if response.Err != nil {
 					h.log("Error responding to NCurrentClientsCommand request: ", response.Err)
@@ -162,7 +159,7 @@ func (h *Hub) runClientMessageHandler() {
 				clientMessage.conn.send <- response.Response
 
 			default:
-				h.log("The command ", cmm.Command, " is not supported.")
+				h.log("The request command ", cmm.Command, " is not supported.")
 			}
 		}
 	}
@@ -224,9 +221,8 @@ func processPIDListCommand(connectionsList *list.List) ([]byte, error) {
 }
 
 func init() {
-	//now := time.Now().UnixNano()
 	hub.log("Launching hub init")
-	go hub.runClientMessageHandler()
+	go hub.runClientsMessageHandler()
 	go hub.runHub()
 
 	pid.SetBroadcastHandle(Broadcast)

@@ -1,6 +1,7 @@
 package pid
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"local/gintest/constants"
@@ -93,10 +94,10 @@ func RequestCommand(request constants.CommandRequest) constants.CommandResponse 
 }
 
 func RequestPIDListEventStruct() constants.PIDListResponse {
-	request := constants.CommandRequest{Command: constants.PIDListCommand, Response: make(chan constants.CommandResponse)}
+	request := constants.NewCommandRequest(constants.PIDListCommandRequest, []byte{}) //constants.CommandRequest{Command: constants.PIDListCommandRequest, Response: make(chan constants.CommandResponse)}
 	response := RequestCommand(request)
 	var listResponse constants.PIDListResponse
-	err := listResponse.Parse(response.Response)
+	err := json.Unmarshal(response.Response, &listResponse)
 	if err != nil {
 		log.Println("On pid RequestApiPids: Error parsing the List Event : ", err)
 	}
@@ -131,7 +132,7 @@ func (h *pidsHub) runHub() {
 			h.log("Incoming Command id=", request.Command)
 			switch request.Command {
 
-			case constants.PIDListCommand:
+			case constants.PIDListCommandRequest:
 				h.log("Dispatching PID List Command")
 				responseData, err := processPIDListCommand(dummyTickersMap)
 				if err != nil {
