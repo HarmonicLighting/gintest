@@ -1,7 +1,6 @@
 package pid
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"local/gintest/constants"
@@ -62,7 +61,7 @@ func Unsubscribe(pid *DummyPIDTicker) {
 	dHub.unsubscribe <- pid
 }
 
-func (h *pidsHub) RequestCommand(request constants.CommandRequest) constants.CommandResponse {
+func (h *pidsHub) RequestCommand(request constants.CommandRequest) constants.RawCommandResponse {
 	h.incomingCommand <- request
 	return <-request.Response
 }
@@ -72,36 +71,9 @@ func SetBroadcastHandle(handle constants.BroadcastHandle) {
 	dHub.broadcastHandler = handle
 }
 
-func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []constants.ApiPid {
-	pids := make([]constants.ApiPid, len(dummyTickersMap))
-	i := 0
-	for _, pid := range dummyTickersMap {
-		pids[i] = constants.NewApiPID(pid.name, pid.index, float32(pid.period))
-		i++
-	}
-	return pids
-}
-
-func processPIDListCommand(dummyTickersMap map[int]*DummyPIDTicker) ([]byte, error) {
-	pids := getApiPidsList(dummyTickersMap)
-	responseStruct := constants.NewPIDListResponse(pids)
-	return responseStruct.Stringify()
-}
-
-func RequestCommand(request constants.CommandRequest) constants.CommandResponse {
+func RequestCommand(request constants.CommandRequest) constants.RawCommandResponse {
 	dHub.incomingCommand <- request
 	return <-request.Response
-}
-
-func RequestPIDListEventStruct() constants.PIDListResponse {
-	request := constants.NewCommandRequest(constants.PIDListCommandRequest, []byte{}) //constants.CommandRequest{Command: constants.PIDListCommandRequest, Response: make(chan constants.CommandResponse)}
-	response := RequestCommand(request)
-	var listResponse constants.PIDListResponse
-	err := json.Unmarshal(response.Response, &listResponse)
-	if err != nil {
-		log.Println("On pid RequestApiPids: Error parsing the List Event : ", err)
-	}
-	return listResponse
 }
 
 func broadcast(message []byte) error {
@@ -138,11 +110,13 @@ func (h *pidsHub) runHub() {
 				if err != nil {
 					h.log("Error processing PID List Command: ", err)
 				}
-				request.Response <- constants.NewCommandResponse(responseData, err)
+				request.Response <- responseData
 
 			default:
 				h.log("Invalid Command Id (", request.Command, ")")
-				request.Response <- constants.NewCommandResponse([]byte{}, errors.New("Invalid Command ID"))
+				notSupportedResponse := constants.NewNotSupportedStatusCommandResponse(request.Command)
+				response, _ := notSupportedResponse.Stringify()
+				request.Response <- response
 			}
 		}
 	}
@@ -165,16 +139,7 @@ func init() {
 	if err != nil {
 		log.Println("Error dialing to the DB: ", err)
 	} else {
-		listEvent := RequestPIDListEventStruct()
-		log.Println("Obtained ", len(listEvent.List), " pids to insert to the DB")
-		var dbpids db.DBPids
-		pids := make([]*db.DBPid, len(listEvent.List))
-		for i, pid := range listEvent.List {
-			pids[i] = &db.DBPid{Name: pid.Name, Pid: pid.Index, Period: time.Duration(pid.Period)}
-		}
-		dbpids.Timestamp = now
-		dbpids.Pids = pids
-		dbase.InsertPids(dbpids)
+		SavePidsToDb(now)
 	}
 
 }

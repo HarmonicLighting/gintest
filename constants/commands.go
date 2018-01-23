@@ -3,12 +3,36 @@ package constants
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 )
 
 type BroadcastHandle func([]byte)
 
+type StatusType int
+
+const (
+	BadRequestStatus          StatusType = -2
+	RequestNotSupportedStatus StatusType = -1
+)
+
+func NewNotSupportedStatusCommandResponse(command CommandRequestType) CommandResponseHeader {
+	return NewCommandResponseHeader(NotSupportedCommandResponse, RequestNotSupportedStatus, fmt.Sprint("The Command Request ", command, " is not supported"))
+}
+
+func NewBadRequestCommandResponse() CommandResponseHeader {
+	return NewCommandResponseHeader(NotSupportedCommandResponse, BadRequestStatus, fmt.Sprint("The Command Request is unrecognizable"))
+}
+
 type CommandResponseType int
+
+const NotSupportedCommandResponse CommandResponseType = -1
+const (
+	PIDListCommandResponse CommandResponseType = iota
+	PIDUpdateCommandResponse
+	NCurrentClientsCommandResponse
+)
+
 type CommandRequestType int
 
 const (
@@ -17,32 +41,19 @@ const (
 	NCurrentClientsCommandRequest
 )
 
-const (
-	PIDListCommandResponse CommandResponseType = iota
-	PIDUpdateCommandResponse
-	NCurrentClientsCommandResponse
-)
-
-type CommandResponse struct {
-	Response []byte
-	Err      error
-}
-
-func NewCommandResponse(response []byte, err error) CommandResponse {
-	return CommandResponse{Response: response, Err: err}
-}
+type RawCommandResponse []byte
 
 type CommandRequest struct {
 	Command  CommandRequestType
 	Data     []byte
-	Response chan CommandResponse
+	Response chan RawCommandResponse
 }
 
 func NewCommandRequest(command CommandRequestType, data []byte) CommandRequest {
-	return CommandRequest{Command: command, Data: data, Response: make(chan CommandResponse)}
+	return CommandRequest{Command: command, Data: data, Response: make(chan RawCommandResponse)}
 }
 
-func (cr *CommandRequest) SendCommandResponse(response CommandResponse) {
+func (cr *CommandRequest) SendCommandResponse(response RawCommandResponse) {
 	if cr.Response == nil {
 		log.Println(">> COMMAND REQUEST ERROR: Response channel is Nil")
 		return
@@ -62,11 +73,18 @@ type CommandRequestHeader struct {
 	Command CommandRequestType `json:"command"`
 }
 
-// TO-IMPLEMENT
 type CommandResponseHeader struct {
 	Command CommandResponseType `json:"command"`
-	Status  int                 `json:"status"`
-	Error   string              `json:"error"`
+	Status  StatusType          `json:"status"`
+	Error   string              `json:"error,omitempty"`
+}
+
+func NewCommandResponseHeader(responseType CommandResponseType, status StatusType, err string) CommandResponseHeader {
+	return CommandResponseHeader{Command: responseType, Status: status, Error: err}
+}
+
+func (r *CommandResponseHeader) Stringify() ([]byte, error) {
+	return json.Marshal(r)
 }
 
 type ApiPid struct {
@@ -116,21 +134,4 @@ func (r *PIDUpdateResponse) Parse(data []byte) error {
 		return errors.New("The data to parse is not a valid JSON encoding")
 	}
 	return json.Unmarshal(data, r)
-}
-
-type ApiNClients struct {
-	Number int `json:"number"`
-}
-
-type NCurrentClientsResponse struct {
-	CommandResponseHeader
-	ApiNClients
-}
-
-func NewNCurrentClientsResponse(nClients int) NCurrentClientsResponse {
-	return NCurrentClientsResponse{CommandResponseHeader: CommandResponseHeader{Command: NCurrentClientsCommandResponse}, ApiNClients: ApiNClients{Number: nClients}}
-}
-
-func (r *NCurrentClientsResponse) Stringify() ([]byte, error) {
-	return json.Marshal(r)
 }

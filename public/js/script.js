@@ -25,7 +25,7 @@ socket.onmessage = function(event) {
 
   switch (message.command) {
     case 0:
-      refreshSignals(message.pids)
+      refreshSignals(message)
       break;
     case 1:
       refreshValues(message)
@@ -34,7 +34,11 @@ socket.onmessage = function(event) {
       refreshCurrentUsersCount(message)
       break;
     default:
-      console.warn("Unknown Command "+message.command);
+      if (message.command < 0) {
+        logError(message)
+      }else{
+        console.warn("Unknown Command "+message.command);
+      }
   }
 }
 
@@ -49,8 +53,19 @@ var refreshValues = function(message) {
   $(`#sdate-${message.index}`).html(`On ${dt}`);
 }
 
+var logError = function(message){
+  if(message.status < 0){
+    console.warn(`Error in Response Command ${message.command}. Status: ${message.status}, Message: ${message.error} `);
+  }
+}
+
 // Refresh the signals
-var refreshSignals = function(signals){
+var refreshSignals = function(message){
+  if(message.status < 0){
+    logError(message)
+    return
+  }
+  signals = message.pids
 
     function compare(a,b) {
       if (a.index < b.index)

@@ -103,7 +103,7 @@ func (c *Conn) ReadPump() {
 		c.log("Got a message ", typ, " ", string(message), " ", err)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
-				c.logf("error: %v", err)
+				c.logf("Unexpected Close error: %v", err)
 			}
 			break
 		}
