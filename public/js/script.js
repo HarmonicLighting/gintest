@@ -3,7 +3,6 @@ var socket = new WebSocket('ws://'+window.location.host+'/ws')
 
 
 socket.onopen = function (event) {
-  //exampleSocket.send("Here's some text that the server is urgently awaiting!");
   console.log("Connected!");
   var command = {command:0}
   var jsonCommand = JSON.stringify(command)
@@ -21,7 +20,7 @@ socket.onmessage = function(event) {
 
   var message = JSON.parse(event.data)
 
-  console.log(message);
+  //console.log(message);
 
 
   switch (message.command) {
@@ -31,16 +30,23 @@ socket.onmessage = function(event) {
     case 1:
       refreshValues(message)
       break;
+    case 2:
+      refreshCurrentUsersCount(message)
+      break;
     default:
       console.warn("Unknown Command "+message.command);
   }
 }
 
+var refreshCurrentUsersCount = function(message){
+  $('#connectedClients').html(`${message.number}`);
+}
+
 // Display a message
-var refreshValues = function(event) {
-  var dt = new Date(event.timestamp/1000000);
-  $(`#svalue-${event.index}`).html(`${event.value}`);
-  $(`#sdate-${event.index}`).html(`On ${dt}`);
+var refreshValues = function(message) {
+  var dt = new Date(message.timestamp/1000000);
+  $(`#svalue-${message.index}`).html(`${message.value}`);
+  $(`#sdate-${message.index}`).html(`On ${dt}`);
 }
 
 // Refresh the signals

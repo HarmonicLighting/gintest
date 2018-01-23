@@ -29,16 +29,18 @@ type Hub struct {
 
 	// Unregister requests from connections.
 	unregister chan *Conn
+
+	// Attend Number of current Clients Command requests.
+	incomingNCurrentClientsCommand chan constants.CommandRequest
 }
 
 var hub = Hub{
 	incomingMessage: make(chan clientMessage),
 
-	broadcast:  make(chan []byte),
-	register:   make(chan *Conn),
-	unregister: make(chan *Conn),
-	//connectionsMap:  make(map[int32]*Conn),
-	//connectionsPool: list.New(),
+	broadcast:                      make(chan []byte),
+	register:                       make(chan *Conn),
+	unregister:                     make(chan *Conn),
+	incomingNCurrentClientsCommand: make(chan constants.CommandRequest),
 }
 
 func (h *Hub) log(v ...interface{}) {
@@ -101,11 +103,16 @@ func processClientMessage(cm clientMessage) {
 	hub.incomingMessage <- cm
 }
 
+func (h *Hub) requestNCurrentClientsCommand(request constants.CommandRequest) constants.CommandResponse {
+	h.incomingNCurrentClientsCommand <- request
+	return <-request.Response
+}
+
 func (h *Hub) BroadcastMessage(message []byte, connectionsList *list.List, connectionsMap map[int32]*Conn) {
 	h.log("There are ", connectionsList.Len(), " connections to broadcast to")
 	i := 1
 	for e := connectionsList.Front(); e != nil; e = e.Next() {
-		h.log("broadcast to conn in place", i)
+		h.log("broadcast to conn in place ", i)
 		i++
 		select {
 
@@ -125,6 +132,7 @@ func (h *Hub) BroadcastMessage(message []byte, connectionsList *list.List, conne
 }
 
 func (h *Hub) runClientMessageHandler() {
+
 	for {
 		clientMessage := <-h.incomingMessage
 		// Handle the client message Here
@@ -144,15 +152,19 @@ func (h *Hub) runClientMessageHandler() {
 					log.Println("Sending the processed command response to client ", clientMessage.conn.connID)
 					clientMessage.conn.send <- response.Response
 				}
+
+			case constants.NCurrentClientsCommand:
+				rc := constants.NewCommandRequest(constants.NCurrentClientsCommand, clientMessage.message)
+				response := h.requestNCurrentClientsCommand(rc)
+				if response.Err != nil {
+					h.log("Error responding to NCurrentClientsCommand request: ", response.Err)
+				}
+				clientMessage.conn.send <- response.Response
+
 			default:
 				h.log("The command ", cmm.Command, " is not supported.")
 			}
 		}
-
-		// for now we will just broadcast the arriving messages
-		//h.log("Broadcasting message comming from the connection ", clientMessage.conn.connID)
-		//Broadcast(clientMessage.message)
-
 	}
 }
 
@@ -169,6 +181,12 @@ func (h *Hub) runHub() {
 			h.log("Registering a connection")
 			h.registerConnection(conn, connectionsList, connectionsMap)
 
+			responseData, err := processPIDListCommand(connectionsList)
+			if err != nil {
+				h.log("Error processing PID List Command: ", err)
+			}
+			h.BroadcastMessage(responseData, connectionsList, connectionsMap)
+
 			// A connection needs to be deleted
 		case conn := <-h.unregister:
 			h.log("Unregistering a connection")
@@ -178,12 +196,31 @@ func (h *Hub) runHub() {
 				h.log("Error removing connection: ", err.Error())
 			}
 
+			responseData, err := processPIDListCommand(connectionsList)
+			if err != nil {
+				h.log("Error processing PID List Command: ", err)
+			}
+			h.BroadcastMessage(responseData, connectionsList, connectionsMap)
+
 			// A message needs to be broadcasted
 		case message := <-h.broadcast:
 			h.log("Broadcasting")
 			h.BroadcastMessage(message, connectionsList, connectionsMap)
+
+		case request := <-h.incomingNCurrentClientsCommand:
+			h.log("Dispatching NCurrentClients Command")
+			responseData, err := processPIDListCommand(connectionsList)
+			if err != nil {
+				h.log("Error processing PID List Command: ", err)
+			}
+			request.Response <- constants.NewCommandResponse(responseData, err)
 		}
 	}
+}
+
+func processPIDListCommand(connectionsList *list.List) ([]byte, error) {
+	responseStruct := constants.NewNCurrentClientsResponse(connectionsList.Len())
+	return responseStruct.Stringify()
 }
 
 func init() {

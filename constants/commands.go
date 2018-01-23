@@ -30,6 +30,10 @@ type CommandRequest struct {
 	Response chan CommandResponse
 }
 
+func (cr *CommandRequest) SendCommandResponse(response CommandResponse) {
+	cr.Response <- response
+}
+
 func NewCommandRequest(command CommandType, data []byte) CommandRequest {
 	return CommandRequest{Command: command, Data: data, Response: make(chan CommandResponse)}
 }
