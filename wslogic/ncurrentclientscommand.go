@@ -16,6 +16,10 @@ type NCurrentClientsResponse struct {
 	ApiNClients
 }
 
+const (
+	errorNCurrentClientsStatus commons.StatusType = -1
+)
+
 func NewNCurrentClientsResponse(nClients int) NCurrentClientsResponse {
 	return NCurrentClientsResponse{ApiResponseHeader: commons.ApiResponseHeader{Command: commons.NCurrentClientsCommandResponse}, ApiNClients: ApiNClients{Number: nClients}}
 }
@@ -24,16 +28,12 @@ func (r *NCurrentClientsResponse) Stringify() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-const (
-	errorNCurrentClientsStatus commons.StatusType = -1
-)
-
-func (h *Hub) requestNCurrentClientsCommand(request commons.CommandRequest) commons.RawCommandResponse {
+func (h *ConnectionsHub) requestNCurrentClientsCommand(request commons.CommandRequest) commons.RawResponseData {
 	h.incomingNCurrentClientsCommand <- request
 	return <-request.Response
 }
 
-func processNCurrentClientsCommand(connectionsList *list.List) commons.RawCommandResponse {
+func processNCurrentClientsCommand(connectionsList *list.List) commons.RawResponseData {
 	responseStruct := NewNCurrentClientsResponse(connectionsList.Len())
 	bytes, err := responseStruct.Stringify()
 	if err != nil {

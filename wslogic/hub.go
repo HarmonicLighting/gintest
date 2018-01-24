@@ -20,7 +20,7 @@ import (
 
 // Hub maintains the set of active connections and broadcasts messages to the
 // connections.
-type Hub struct {
+type ConnectionsHub struct {
 
 	// Messages to broadcast to all the connections
 	broadcast chan []byte
@@ -38,7 +38,7 @@ type Hub struct {
 	incomingNCurrentClientsCommand chan commons.CommandRequest
 }
 
-var hub = Hub{
+var connectionsHub = ConnectionsHub{
 	incomingMessage: make(chan clientMessage),
 
 	broadcast:                      make(chan []byte),
@@ -47,7 +47,7 @@ var hub = Hub{
 	incomingNCurrentClientsCommand: make(chan commons.CommandRequest),
 }
 
-func (h *Hub) log(v ...interface{}) {
+func (h *ConnectionsHub) log(v ...interface{}) {
 	if debugging {
 		text := fmt.Sprint(v...)
 		prefix := fmt.Sprint("<<< HUB >>> ~ ")
@@ -58,7 +58,7 @@ func (h *Hub) log(v ...interface{}) {
 	}
 }
 
-func (h *Hub) logf(format string, v ...interface{}) {
+func (h *ConnectionsHub) logf(format string, v ...interface{}) {
 	if debugging {
 		prefix := fmt.Sprint("<<< HUB >>> ~ ")
 		if debugWithTimeStamp {
@@ -68,7 +68,7 @@ func (h *Hub) logf(format string, v ...interface{}) {
 	}
 }
 
-func (h *Hub) removeConnection(conn *Conn, connectionsList *list.List, connectionsMap map[int32]*Conn) {
+func (h *ConnectionsHub) removeConnection(conn *Conn, connectionsList *list.List, connectionsMap map[int32]*Conn) {
 
 	delete(connectionsMap, conn.connID)
 
@@ -85,29 +85,29 @@ func (h *Hub) removeConnection(conn *Conn, connectionsList *list.List, connectio
 	errors.New("The connection was not found into the list")
 }
 
-func (h *Hub) registerConnection(conn *Conn, connectionsList *list.List, connectionsMap map[int32]*Conn) {
+func (h *ConnectionsHub) registerConnection(conn *Conn, connectionsList *list.List, connectionsMap map[int32]*Conn) {
 	connectionsMap[conn.connID] = conn
 	connectionsList.PushBack(conn)
 	h.log("There are now ", connectionsList.Len(), " (", len(connectionsMap), " in map) active connections")
 }
 
 func Register(conn *Conn) {
-	hub.register <- conn
+	connectionsHub.register <- conn
 }
 
 func Unregister(conn *Conn) {
-	hub.unregister <- conn
+	connectionsHub.unregister <- conn
 }
 
 func Broadcast(message []byte) {
-	hub.broadcast <- message
+	connectionsHub.broadcast <- message
 }
 
 func processClientMessage(cm clientMessage) {
-	hub.incomingMessage <- cm
+	connectionsHub.incomingMessage <- cm
 }
 
-func (h *Hub) BroadcastMessage(message []byte, connectionsList *list.List, connectionsMap map[int32]*Conn) {
+func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.List, connectionsMap map[int32]*Conn) {
 	h.log("There are ", connectionsList.Len(), " connections to broadcast to")
 	for e := connectionsList.Front(); e != nil; e = e.Next() {
 		select {
@@ -128,7 +128,7 @@ func (h *Hub) BroadcastMessage(message []byte, connectionsList *list.List, conne
 	}
 }
 
-func (h *Hub) runClientsMessageHandler() {
+func (h *ConnectionsHub) runClientsMessageHandler() {
 
 	for clientMessage := range h.incomingMessage {
 
@@ -145,7 +145,7 @@ func (h *Hub) runClientsMessageHandler() {
 
 			case commons.ApiPidListCommandRequest:
 				rc := commons.NewCommandRequest(cmm.Command, clientMessage.message)
-				response := pid.RequestCommand(rc)
+				response := pid.RequestPidList(rc)
 				clientMessage.conn.send <- response
 
 			case commons.ApiNCurrentClientsCommandRequest:
@@ -163,7 +163,7 @@ func (h *Hub) runClientsMessageHandler() {
 	}
 }
 
-func (h *Hub) runHub() {
+func (h *ConnectionsHub) runHub() {
 
 	// The shared variables are declared in the beginning
 	connectionsList := list.New()
@@ -178,7 +178,7 @@ func (h *Hub) runHub() {
 			h.registerConnection(conn, connectionsList, connectionsMap)
 
 			responseData := processNCurrentClientsCommand(connectionsList)
-			h.BroadcastMessage(responseData, connectionsList, connectionsMap)
+			h.broadcastMessage(responseData, connectionsList, connectionsMap)
 
 			// A connection needs to be deleted
 		case conn := <-h.unregister:
@@ -187,12 +187,12 @@ func (h *Hub) runHub() {
 			h.removeConnection(conn, connectionsList, connectionsMap)
 			responseData := processNCurrentClientsCommand(connectionsList)
 			// Broadcast the updated Client connections count
-			h.BroadcastMessage(responseData, connectionsList, connectionsMap)
+			h.broadcastMessage(responseData, connectionsList, connectionsMap)
 
 			// A message needs to be broadcasted
 		case message := <-h.broadcast:
 			h.log("Broadcasting")
-			h.BroadcastMessage(message, connectionsList, connectionsMap)
+			h.broadcastMessage(message, connectionsList, connectionsMap)
 
 			// A command operating on shared resources arrived
 		case request := <-h.incomingNCurrentClientsCommand:
@@ -206,9 +206,9 @@ func (h *Hub) runHub() {
 }
 
 func init() {
-	hub.log("Launching hub init")
-	go hub.runClientsMessageHandler()
-	go hub.runHub()
+	log.Println("INIT HUB.GO >>> ", commons.GetInitCounter())
+	go connectionsHub.runClientsMessageHandler()
+	go connectionsHub.runHub()
 
 	pid.SetBroadcastHandle(Broadcast)
 

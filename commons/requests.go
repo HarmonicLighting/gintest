@@ -10,19 +10,20 @@ const (
 	ApiNCurrentClientsCommandRequest
 )
 
-type RawCommandResponse []byte
+type RawResponseData []byte
+type RawRequestData []byte
 
 type CommandRequest struct {
 	Command  CommandRequestType
-	Data     []byte
-	Response chan RawCommandResponse
+	Data     RawRequestData
+	Response chan RawResponseData
 }
 
 func NewCommandRequest(command CommandRequestType, data []byte) CommandRequest {
-	return CommandRequest{Command: command, Data: data, Response: make(chan RawCommandResponse)}
+	return CommandRequest{Command: command, Data: data, Response: make(chan RawResponseData)}
 }
 
-func (cr *CommandRequest) SendCommandResponse(response RawCommandResponse) {
+func (cr *CommandRequest) SendCommandResponse(response RawResponseData) {
 	if cr.Response == nil {
 		log.Println(">> COMMAND REQUEST ERROR: Response channel is Nil")
 		return

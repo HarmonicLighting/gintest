@@ -13,6 +13,10 @@ import (
 )
 
 var (
+	pidIndexCounter int32
+)
+
+var (
 	dbase *db.DB
 )
 

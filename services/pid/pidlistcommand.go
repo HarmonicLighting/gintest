@@ -49,7 +49,7 @@ func processPIDListCommand(dummyTickersMap map[int]*DummyPIDTicker) ([]byte, err
 
 func RequestPIDListEventStruct() ApiPidListResponse {
 	request := commons.NewCommandRequest(commons.ApiPidListCommandRequest, []byte{})
-	response := RequestCommand(request)
+	response := RequestPidList(request)
 	var listResponse ApiPidListResponse
 	err := json.Unmarshal(response, &listResponse)
 	if err != nil {
