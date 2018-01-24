@@ -2,8 +2,6 @@ package wslogic
 
 import (
 	"container/list"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"local/gintest/commons"
 	"local/gintest/services/pid"
@@ -25,9 +23,6 @@ type ConnectionsHub struct {
 	// Messages to broadcast to all the connections
 	broadcast chan []byte
 
-	// Incoming messages from the connections
-	incomingMessage chan clientMessage
-
 	// Register requests from the connections.
 	register chan *Conn
 
@@ -39,7 +34,6 @@ type ConnectionsHub struct {
 }
 
 var connectionsHub = ConnectionsHub{
-	incomingMessage: make(chan clientMessage),
 
 	broadcast:                      make(chan []byte),
 	register:                       make(chan *Conn),
@@ -50,7 +44,7 @@ var connectionsHub = ConnectionsHub{
 func (h *ConnectionsHub) log(v ...interface{}) {
 	if debugging {
 		text := fmt.Sprint(v...)
-		prefix := fmt.Sprint("<<< HUB >>> ~ ")
+		prefix := fmt.Sprint("< CONN HUB > ~ ")
 		if debugWithTimeStamp {
 			prefix = time.Now().Format(time.StampMicro) + " " + prefix
 		}
@@ -60,7 +54,7 @@ func (h *ConnectionsHub) log(v ...interface{}) {
 
 func (h *ConnectionsHub) logf(format string, v ...interface{}) {
 	if debugging {
-		prefix := fmt.Sprint("<<< HUB >>> ~ ")
+		prefix := fmt.Sprint("< CONN HUB > ~ ")
 		if debugWithTimeStamp {
 			prefix = time.Now().Format(time.StampMicro) + " " + prefix
 		}
@@ -82,7 +76,7 @@ func (h *ConnectionsHub) removeConnection(conn *Conn, connectionsList *list.List
 		}
 	}
 
-	errors.New("The connection was not found into the list")
+	h.log("The connection was not found into the list")
 }
 
 func (h *ConnectionsHub) registerConnection(conn *Conn, connectionsList *list.List, connectionsMap map[int32]*Conn) {
@@ -101,10 +95,6 @@ func Unregister(conn *Conn) {
 
 func Broadcast(message []byte) {
 	connectionsHub.broadcast <- message
-}
-
-func processClientMessage(cm clientMessage) {
-	connectionsHub.incomingMessage <- cm
 }
 
 func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.List, connectionsMap map[int32]*Conn) {
@@ -128,42 +118,7 @@ func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.
 	}
 }
 
-func (h *ConnectionsHub) runClientsMessageHandler() {
-
-	for clientMessage := range h.incomingMessage {
-
-		var cmm commons.ApiRequestHeader
-		err := json.Unmarshal(clientMessage.message, &cmm)
-		if err != nil {
-			h.log("Error unmarshalling the event command ", string(clientMessage.message), ": ", err)
-			badRequestResponse := commons.NewBadRequestApiResponse()
-			response, _ := badRequestResponse.Stringify()
-			clientMessage.conn.send <- response
-		} else {
-
-			switch cmm.Command {
-
-			case commons.ApiPidListCommandRequest:
-				rc := commons.NewCommandRequest(cmm.Command, clientMessage.message)
-				response := pid.RequestPidList(rc)
-				clientMessage.conn.send <- response
-
-			case commons.ApiNCurrentClientsCommandRequest:
-				rc := commons.NewCommandRequest(cmm.Command, clientMessage.message)
-				response := h.requestNCurrentClientsCommand(rc)
-				clientMessage.conn.send <- response
-
-			default:
-				h.log("The request command ", cmm.Command, " is not supported.")
-				notSupportedResponse := commons.NewNotSupportedStatusApiResponse(cmm.Command)
-				response, _ := notSupportedResponse.Stringify()
-				clientMessage.conn.send <- response
-			}
-		}
-	}
-}
-
-func (h *ConnectionsHub) runHub() {
+func (h *ConnectionsHub) runConnectionsHub() {
 
 	// The shared variables are declared in the beginning
 	connectionsList := list.New()
@@ -206,9 +161,8 @@ func (h *ConnectionsHub) runHub() {
 }
 
 func init() {
-	log.Println("INIT HUB.GO >>> ", commons.GetInitCounter())
-	go connectionsHub.runClientsMessageHandler()
-	go connectionsHub.runHub()
+	log.Println("INIT ConnectionsHUB.GO >>> ", commons.GetInitCounter())
+	go connectionsHub.runConnectionsHub()
 
 	pid.SetBroadcastHandle(Broadcast)
 
