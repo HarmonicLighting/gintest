@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 
+	"local/gintest/services/pid"
 	"local/gintest/wslogic"
 
 	"github.com/gorilla/websocket"
@@ -16,6 +17,8 @@ var upgrader = websocket.Upgrader{
 
 // ServeWs handles websocket requests from the peer.
 func ServeWs(w http.ResponseWriter, r *http.Request) {
+	apid := pid.ApiPid{}
+	log.Println(apid)
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)

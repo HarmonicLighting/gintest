@@ -1,10 +1,10 @@
 package pid
 
 import (
-	"errors"
 	"fmt"
 	"local/gintest/commons"
 	"local/gintest/services/db"
+	"local/gintest/wslogic"
 	"log"
 	"time"
 )
@@ -18,8 +18,6 @@ type PidsHub struct {
 	subscribe              chan *DummyPIDTicker
 	unsubscribe            chan *DummyPIDTicker
 	incomingPidListRequest chan commons.CommandRequest
-
-	broadcastHandler commons.BroadcastHandle
 }
 
 func (h *PidsHub) log(v ...interface{}) {
@@ -58,22 +56,9 @@ func Unsubscribe(pid *DummyPIDTicker) {
 	pidsHub.unsubscribe <- pid
 }
 
-// SetBroadcastHandle sets a broadcast handle to be used for this module
-func SetBroadcastHandle(handle commons.BroadcastHandle) {
-	pidsHub.broadcastHandler = handle
-}
-
 func RequestPidList(request commons.CommandRequest) commons.RawResponseData {
 	pidsHub.incomingPidListRequest <- request
 	return <-request.Response
-}
-
-func broadcast(message []byte) error {
-	if pidsHub.broadcastHandler == nil {
-		return errors.New("The Broadcast handler is not set")
-	}
-	pidsHub.broadcastHandler(message)
-	return nil
 }
 
 func (h *PidsHub) runPidsHub() {
@@ -107,10 +92,11 @@ func (h *PidsHub) runPidsHub() {
 	}
 }
 
-func init() {
+func Init() {
 
 	log.Println("INIT PID.GO >>> ", commons.GetInitCounter())
-
+	wslogic.RegisterMessagesHandler(wslogic.RequestMessagesHandler{RequestType: commons.ApiPidListCommandRequest, Handler: RequestPidList})
+	log.Println("INIT PID.GO >>> Back from registering messages handler")
 	go pidsHub.runPidsHub()
 
 	now := time.Now().UnixNano()

@@ -4,7 +4,6 @@ import (
 	"container/list"
 	"fmt"
 	"local/gintest/commons"
-	"local/gintest/services/pid"
 	"log"
 	"time"
 )
@@ -160,10 +159,17 @@ func (h *ConnectionsHub) runConnectionsHub() {
 	}
 }
 
-func init() {
+func Init() {
+
+	log.Println("INIT MessagesHUB.GO >>> ", commons.GetInitCounter())
+	go messagesHub.runMessagesHub()
+
 	log.Println("INIT ConnectionsHUB.GO >>> ", commons.GetInitCounter())
+
+	RegisterMessagesHandler(RequestMessagesHandler{RequestType: commons.ApiNCurrentClientsCommandRequest, Handler: connectionsHub.requestNCurrentClientsCommand})
+	log.Println("INIT ConnectionsHUB.GO >>> Back from registering messages handler")
 	go connectionsHub.runConnectionsHub()
 
-	pid.SetBroadcastHandle(Broadcast)
+	//pid.SetBroadcastHandle(Broadcast)
 
 }

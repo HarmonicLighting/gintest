@@ -5,9 +5,15 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"local/gintest/controllers/ws"
+	"local/gintest/services/pid"
+	"local/gintest/wslogic"
 )
 
 func main() {
+
+	wslogic.Init()
+	pid.Init()
+
 	r := gin.Default()
 	r.Use(static.Serve("/public", static.LocalFile("./public", true)))
 	r.LoadHTMLFiles("index.html")
@@ -21,5 +27,5 @@ func main() {
 		controllers.ServeWs(c.Writer, c.Request)
 	})
 
-	r.Run("localhost:2020")
+	r.Run("localhost:2021")
 }

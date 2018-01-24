@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"local/gintest/commons"
 	"local/gintest/services/db"
+	"local/gintest/wslogic"
 	"log"
 	"math/rand"
 	"sync/atomic"
@@ -141,7 +142,7 @@ func standardTickHandler(t *DummyPIDTicker, time time.Time) {
 		return
 	}
 	log.Println("Broadcasting event ", string(message), " by Dummy Ticker ", t.GetName())
-	broadcast(message)
+	wslogic.Broadcast(message)
 	log.Println("Saving sample to DB")
 	d, err := dbase.Copy()
 	if err != nil {
