@@ -3,89 +3,9 @@ package constants
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log"
 )
 
 type BroadcastHandle func([]byte)
-
-type StatusType int
-
-const (
-	BadRequestStatus          StatusType = -2
-	RequestNotSupportedStatus StatusType = -1
-)
-
-func NewNotSupportedStatusCommandResponse(command CommandRequestType) CommandResponseHeader {
-	return NewCommandResponseHeader(NotSupportedCommandResponse, RequestNotSupportedStatus, fmt.Sprint("The Command Request ", command, " is not supported"))
-}
-
-func NewBadRequestCommandResponse() CommandResponseHeader {
-	return NewCommandResponseHeader(NotSupportedCommandResponse, BadRequestStatus, fmt.Sprint("The Command Request is unrecognizable"))
-}
-
-type CommandResponseType int
-
-const NotSupportedCommandResponse CommandResponseType = -1
-const (
-	PIDListCommandResponse CommandResponseType = iota
-	PIDUpdateCommandResponse
-	NCurrentClientsCommandResponse
-)
-
-type CommandRequestType int
-
-const (
-	PIDListCommandRequest CommandRequestType = iota
-	PIDUpdateCommandRequest
-	NCurrentClientsCommandRequest
-)
-
-type RawCommandResponse []byte
-
-type CommandRequest struct {
-	Command  CommandRequestType
-	Data     []byte
-	Response chan RawCommandResponse
-}
-
-func NewCommandRequest(command CommandRequestType, data []byte) CommandRequest {
-	return CommandRequest{Command: command, Data: data, Response: make(chan RawCommandResponse)}
-}
-
-func (cr *CommandRequest) SendCommandResponse(response RawCommandResponse) {
-	if cr.Response == nil {
-		log.Println(">> COMMAND REQUEST ERROR: Response channel is Nil")
-		return
-	}
-	cr.Response <- response
-}
-
-type Request interface {
-	Parse(data []byte) error
-}
-
-type Response interface {
-	Stringify() ([]byte, error)
-}
-
-type CommandRequestHeader struct {
-	Command CommandRequestType `json:"command"`
-}
-
-type CommandResponseHeader struct {
-	Command CommandResponseType `json:"command"`
-	Status  StatusType          `json:"status"`
-	Error   string              `json:"error,omitempty"`
-}
-
-func NewCommandResponseHeader(responseType CommandResponseType, status StatusType, err string) CommandResponseHeader {
-	return CommandResponseHeader{Command: responseType, Status: status, Error: err}
-}
-
-func (r *CommandResponseHeader) Stringify() ([]byte, error) {
-	return json.Marshal(r)
-}
 
 type ApiPid struct {
 	Name   string  `json:"name"`
@@ -93,17 +13,17 @@ type ApiPid struct {
 	Period float32 `json:"period"`
 }
 
-func NewApiPID(name string, index int, period float32) ApiPid {
+func NewApiPid(name string, index int, period float32) ApiPid {
 	return ApiPid{Name: name, Index: index, Period: period}
 }
 
 type PIDListResponse struct {
-	CommandResponseHeader
+	ApiResponseHeader
 	List []ApiPid `json:"pids"`
 }
 
 func NewPIDListResponse(list []ApiPid) PIDListResponse {
-	return PIDListResponse{CommandResponseHeader: CommandResponseHeader{Command: PIDListCommandResponse}, List: list}
+	return PIDListResponse{ApiResponseHeader: ApiResponseHeader{Command: PIDListCommandResponse}, List: list}
 }
 
 func (r PIDListResponse) Stringify() ([]byte, error) {
@@ -116,20 +36,20 @@ type ApiUpdate struct {
 	Value     float32 `json:"value"`
 }
 
-type PIDUpdateResponse struct {
-	CommandResponseHeader
+type ApiPidUpdateResponse struct {
+	ApiResponseHeader
 	ApiUpdate
 }
 
-func NewPIDUpdateResponse(index int, timestamp int64, value float32) PIDUpdateResponse {
-	return PIDUpdateResponse{CommandResponseHeader: CommandResponseHeader{Command: PIDUpdateCommandResponse}, ApiUpdate: ApiUpdate{Index: index, Timestamp: timestamp, Value: value}}
+func NewPIDUpdateResponse(index int, timestamp int64, value float32) ApiPidUpdateResponse {
+	return ApiPidUpdateResponse{ApiResponseHeader: ApiResponseHeader{Command: PIDUpdateCommandResponse}, ApiUpdate: ApiUpdate{Index: index, Timestamp: timestamp, Value: value}}
 }
 
-func (r *PIDUpdateResponse) Stringify() ([]byte, error) {
+func (r *ApiPidUpdateResponse) Stringify() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func (r *PIDUpdateResponse) Parse(data []byte) error {
+func (r *ApiPidUpdateResponse) Parse(data []byte) error {
 	if !json.Valid(data) {
 		return errors.New("The data to parse is not a valid JSON encoding")
 	}

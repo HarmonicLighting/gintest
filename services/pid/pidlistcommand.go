@@ -12,7 +12,7 @@ func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []constants.ApiPid 
 	pids := make([]constants.ApiPid, len(dummyTickersMap))
 	i := 0
 	for _, pid := range dummyTickersMap {
-		pids[i] = constants.NewApiPID(pid.name, pid.index, float32(pid.period))
+		pids[i] = constants.NewApiPid(pid.name, pid.index, float32(pid.period))
 		i++
 	}
 	return pids

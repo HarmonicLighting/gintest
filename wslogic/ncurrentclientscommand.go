@@ -12,12 +12,12 @@ type ApiNClients struct {
 }
 
 type NCurrentClientsResponse struct {
-	constants.CommandResponseHeader
+	constants.ApiResponseHeader
 	ApiNClients
 }
 
 func NewNCurrentClientsResponse(nClients int) NCurrentClientsResponse {
-	return NCurrentClientsResponse{CommandResponseHeader: constants.CommandResponseHeader{Command: constants.NCurrentClientsCommandResponse}, ApiNClients: ApiNClients{Number: nClients}}
+	return NCurrentClientsResponse{ApiResponseHeader: constants.ApiResponseHeader{Command: constants.NCurrentClientsCommandResponse}, ApiNClients: ApiNClients{Number: nClients}}
 }
 
 func (r *NCurrentClientsResponse) Stringify() ([]byte, error) {
@@ -37,7 +37,7 @@ func processNCurrentClientsCommand(connectionsList *list.List) constants.RawComm
 	responseStruct := NewNCurrentClientsResponse(connectionsList.Len())
 	bytes, err := responseStruct.Stringify()
 	if err != nil {
-		log.Println("ERROR processPIDListCommand >>>> Couldn't stringify the response structure!")
+		log.Println("ERROR processNCurrentClientsCommand >>>> Couldn't stringify the response structure!")
 	}
 	return bytes
 }

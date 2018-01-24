@@ -61,11 +61,6 @@ func Unsubscribe(pid *DummyPIDTicker) {
 	dHub.unsubscribe <- pid
 }
 
-func (h *pidsHub) RequestCommand(request constants.CommandRequest) constants.RawCommandResponse {
-	h.incomingCommand <- request
-	return <-request.Response
-}
-
 // SetBroadcastHandle sets a broadcast handle to be used for this module
 func SetBroadcastHandle(handle constants.BroadcastHandle) {
 	dHub.broadcastHandler = handle
@@ -114,7 +109,7 @@ func (h *pidsHub) runHub() {
 
 			default:
 				h.log("Invalid Command Id (", request.Command, ")")
-				notSupportedResponse := constants.NewNotSupportedStatusCommandResponse(request.Command)
+				notSupportedResponse := constants.NewNotSupportedStatusApiResponse(request.Command)
 				response, _ := notSupportedResponse.Stringify()
 				request.Response <- response
 			}

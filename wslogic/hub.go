@@ -132,11 +132,11 @@ func (h *Hub) runClientsMessageHandler() {
 
 	for clientMessage := range h.incomingMessage {
 
-		var cmm constants.CommandRequestHeader
+		var cmm constants.ApiRequestHeader
 		err := json.Unmarshal(clientMessage.message, &cmm)
 		if err != nil {
 			h.log("Error unmarshalling the event command ", string(clientMessage.message), ": ", err)
-			badRequestResponse := constants.NewBadRequestCommandResponse()
+			badRequestResponse := constants.NewBadRequestApiResponse()
 			response, _ := badRequestResponse.Stringify()
 			clientMessage.conn.send <- response
 		} else {
@@ -155,7 +155,7 @@ func (h *Hub) runClientsMessageHandler() {
 
 			default:
 				h.log("The request command ", cmm.Command, " is not supported.")
-				notSupportedResponse := constants.NewNotSupportedStatusCommandResponse(cmm.Command)
+				notSupportedResponse := constants.NewNotSupportedStatusApiResponse(cmm.Command)
 				response, _ := notSupportedResponse.Stringify()
 				clientMessage.conn.send <- response
 			}
