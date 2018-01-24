@@ -3,15 +3,15 @@ package pid
 import (
 	"errors"
 	"fmt"
-	"local/gintest/constants"
+	"local/gintest/commons"
 	"local/gintest/services/db"
 	"log"
 	"time"
 )
 
 const (
-	debugging          = constants.Debugging
-	debugWithTimeStamp = constants.DebugWithTimeStamp
+	debugging          = commons.Debugging
+	debugWithTimeStamp = commons.DebugWithTimeStamp
 )
 
 var (
@@ -21,9 +21,9 @@ var (
 type pidsHub struct {
 	subscribe       chan *DummyPIDTicker
 	unsubscribe     chan *DummyPIDTicker
-	incomingCommand chan constants.CommandRequest
+	incomingCommand chan commons.CommandRequest
 
-	broadcastHandler constants.BroadcastHandle
+	broadcastHandler commons.BroadcastHandle
 }
 
 func (h *pidsHub) log(v ...interface{}) {
@@ -50,7 +50,7 @@ func (h *pidsHub) logf(format string, v ...interface{}) {
 var dHub = pidsHub{
 	subscribe:       make(chan *DummyPIDTicker),
 	unsubscribe:     make(chan *DummyPIDTicker),
-	incomingCommand: make(chan constants.CommandRequest),
+	incomingCommand: make(chan commons.CommandRequest),
 }
 
 func Subscribe(pid *DummyPIDTicker) {
@@ -62,11 +62,11 @@ func Unsubscribe(pid *DummyPIDTicker) {
 }
 
 // SetBroadcastHandle sets a broadcast handle to be used for this module
-func SetBroadcastHandle(handle constants.BroadcastHandle) {
+func SetBroadcastHandle(handle commons.BroadcastHandle) {
 	dHub.broadcastHandler = handle
 }
 
-func RequestCommand(request constants.CommandRequest) constants.RawCommandResponse {
+func RequestCommand(request commons.CommandRequest) commons.RawCommandResponse {
 	dHub.incomingCommand <- request
 	return <-request.Response
 }
@@ -99,7 +99,7 @@ func (h *pidsHub) runHub() {
 			h.log("Incoming Command id=", request.Command)
 			switch request.Command {
 
-			case constants.PIDListCommandRequest:
+			case commons.ApiPidListCommandRequest:
 				h.log("Dispatching PID List Command")
 				responseData, err := processPIDListCommand(dummyTickersMap)
 				if err != nil {
@@ -109,7 +109,7 @@ func (h *pidsHub) runHub() {
 
 			default:
 				h.log("Invalid Command Id (", request.Command, ")")
-				notSupportedResponse := constants.NewNotSupportedStatusApiResponse(request.Command)
+				notSupportedResponse := commons.NewNotSupportedStatusApiResponse(request.Command)
 				response, _ := notSupportedResponse.Stringify()
 				request.Response <- response
 			}

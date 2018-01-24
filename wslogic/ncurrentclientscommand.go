@@ -3,7 +3,7 @@ package wslogic
 import (
 	"container/list"
 	"encoding/json"
-	"local/gintest/constants"
+	"local/gintest/commons"
 	"log"
 )
 
@@ -12,12 +12,12 @@ type ApiNClients struct {
 }
 
 type NCurrentClientsResponse struct {
-	constants.ApiResponseHeader
+	commons.ApiResponseHeader
 	ApiNClients
 }
 
 func NewNCurrentClientsResponse(nClients int) NCurrentClientsResponse {
-	return NCurrentClientsResponse{ApiResponseHeader: constants.ApiResponseHeader{Command: constants.NCurrentClientsCommandResponse}, ApiNClients: ApiNClients{Number: nClients}}
+	return NCurrentClientsResponse{ApiResponseHeader: commons.ApiResponseHeader{Command: commons.NCurrentClientsCommandResponse}, ApiNClients: ApiNClients{Number: nClients}}
 }
 
 func (r *NCurrentClientsResponse) Stringify() ([]byte, error) {
@@ -25,15 +25,15 @@ func (r *NCurrentClientsResponse) Stringify() ([]byte, error) {
 }
 
 const (
-	errorNCurrentClientsStatus constants.StatusType = -1
+	errorNCurrentClientsStatus commons.StatusType = -1
 )
 
-func (h *Hub) requestNCurrentClientsCommand(request constants.CommandRequest) constants.RawCommandResponse {
+func (h *Hub) requestNCurrentClientsCommand(request commons.CommandRequest) commons.RawCommandResponse {
 	h.incomingNCurrentClientsCommand <- request
 	return <-request.Response
 }
 
-func processNCurrentClientsCommand(connectionsList *list.List) constants.RawCommandResponse {
+func processNCurrentClientsCommand(connectionsList *list.List) commons.RawCommandResponse {
 	responseStruct := NewNCurrentClientsResponse(connectionsList.Len())
 	bytes, err := responseStruct.Stringify()
 	if err != nil {

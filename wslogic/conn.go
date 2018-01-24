@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"local/gintest/constants"
+	"local/gintest/commons"
 
 	"github.com/gorilla/websocket"
 )
@@ -28,8 +28,8 @@ const (
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 
-	debugging          = constants.Debugging
-	debugWithTimeStamp = constants.DebugWithTimeStamp
+	debugging          = commons.Debugging
+	debugWithTimeStamp = commons.DebugWithTimeStamp
 )
 
 var (

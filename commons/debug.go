@@ -1,4 +1,4 @@
-package constants
+package commons
 
 const (
 	Debugging          = true

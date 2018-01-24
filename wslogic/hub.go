@@ -5,16 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"local/gintest/constants"
+	"local/gintest/commons"
 	"local/gintest/services/pid"
 	"log"
 	"time"
 )
 
 // An implementation Idea to create different responses in a generic way providing a handle function operating on the hub shared resources
-//type ConnectionsHubResponseFunction func(connectionsList *list.List) constants.RawCommandResponse
+//type ConnectionsHubResponseFunction func(connectionsList *list.List) commons.RawCommandResponse
 //type ConnectionsCommandRequest struct {
-//	constants.CommandRequest
+//	commons.CommandRequest
 //	function ConnectionsHubResponseFunction
 //}
 
@@ -35,7 +35,7 @@ type Hub struct {
 	unregister chan *Conn
 
 	// Attend Number of current Clients Command requests.
-	incomingNCurrentClientsCommand chan constants.CommandRequest
+	incomingNCurrentClientsCommand chan commons.CommandRequest
 }
 
 var hub = Hub{
@@ -44,7 +44,7 @@ var hub = Hub{
 	broadcast:                      make(chan []byte),
 	register:                       make(chan *Conn),
 	unregister:                     make(chan *Conn),
-	incomingNCurrentClientsCommand: make(chan constants.CommandRequest),
+	incomingNCurrentClientsCommand: make(chan commons.CommandRequest),
 }
 
 func (h *Hub) log(v ...interface{}) {
@@ -132,30 +132,30 @@ func (h *Hub) runClientsMessageHandler() {
 
 	for clientMessage := range h.incomingMessage {
 
-		var cmm constants.ApiRequestHeader
+		var cmm commons.ApiRequestHeader
 		err := json.Unmarshal(clientMessage.message, &cmm)
 		if err != nil {
 			h.log("Error unmarshalling the event command ", string(clientMessage.message), ": ", err)
-			badRequestResponse := constants.NewBadRequestApiResponse()
+			badRequestResponse := commons.NewBadRequestApiResponse()
 			response, _ := badRequestResponse.Stringify()
 			clientMessage.conn.send <- response
 		} else {
 
 			switch cmm.Command {
 
-			case constants.PIDListCommandRequest:
-				rc := constants.NewCommandRequest(cmm.Command, clientMessage.message)
+			case commons.ApiPidListCommandRequest:
+				rc := commons.NewCommandRequest(cmm.Command, clientMessage.message)
 				response := pid.RequestCommand(rc)
 				clientMessage.conn.send <- response
 
-			case constants.NCurrentClientsCommandRequest:
-				rc := constants.NewCommandRequest(cmm.Command, clientMessage.message)
+			case commons.ApiNCurrentClientsCommandRequest:
+				rc := commons.NewCommandRequest(cmm.Command, clientMessage.message)
 				response := h.requestNCurrentClientsCommand(rc)
 				clientMessage.conn.send <- response
 
 			default:
 				h.log("The request command ", cmm.Command, " is not supported.")
-				notSupportedResponse := constants.NewNotSupportedStatusApiResponse(cmm.Command)
+				notSupportedResponse := commons.NewNotSupportedStatusApiResponse(cmm.Command)
 				response, _ := notSupportedResponse.Stringify()
 				clientMessage.conn.send <- response
 			}

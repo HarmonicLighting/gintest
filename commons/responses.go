@@ -1,4 +1,4 @@
-package constants
+package commons
 
 import (
 	"encoding/json"
@@ -16,8 +16,8 @@ type CommandResponseType int
 
 const NotSupportedCommandResponse CommandResponseType = -1
 const (
-	PIDListCommandResponse CommandResponseType = iota
-	PIDUpdateCommandResponse
+	PidListCommandResponse CommandResponseType = iota
+	PidUpdateCommandResponse
 	NCurrentClientsCommandResponse
 )
 

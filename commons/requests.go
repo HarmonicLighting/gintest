@@ -1,13 +1,13 @@
-package constants
+package commons
 
 import "log"
 
 type CommandRequestType int
 
 const (
-	PIDListCommandRequest CommandRequestType = iota
-	PIDUpdateCommandRequest
-	NCurrentClientsCommandRequest
+	ApiPidListCommandRequest CommandRequestType = iota
+	ApiPidUpdateCommandRequest
+	ApiNCurrentClientsCommandRequest
 )
 
 type RawCommandResponse []byte

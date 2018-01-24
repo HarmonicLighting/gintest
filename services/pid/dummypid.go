@@ -1,8 +1,10 @@
 package pid
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
-	"local/gintest/constants"
+	"local/gintest/commons"
 	"local/gintest/services/db"
 	"log"
 	"math/rand"
@@ -13,6 +15,32 @@ import (
 var (
 	dbase *db.DB
 )
+
+type ApiUpdate struct {
+	Index     int     `json:"index"`
+	Timestamp int64   `json:"timestamp"`
+	Value     float32 `json:"value"`
+}
+
+type ApiPidUpdateResponse struct {
+	commons.ApiResponseHeader
+	ApiUpdate
+}
+
+func NewApiPidUpdateResponse(index int, timestamp int64, value float32) ApiPidUpdateResponse {
+	return ApiPidUpdateResponse{ApiResponseHeader: commons.ApiResponseHeader{Command: commons.PidUpdateCommandResponse}, ApiUpdate: ApiUpdate{Index: index, Timestamp: timestamp, Value: value}}
+}
+
+func (r *ApiPidUpdateResponse) Stringify() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+func (r *ApiPidUpdateResponse) Parse(data []byte) error {
+	if !json.Valid(data) {
+		return errors.New("The data to parse is not a valid JSON encoding")
+	}
+	return json.Unmarshal(data, r)
+}
 
 type DummyPidTickerFunc func(*DummyPIDTicker, time.Time)
 
@@ -102,7 +130,7 @@ func (t *DummyPIDTicker) Launch() {
 
 func standardTickHandler(t *DummyPIDTicker, time time.Time) {
 	randfloat := rand.Float32() * 100
-	event := constants.NewPIDUpdateResponse(t.GetIndex(), time.UnixNano(), randfloat)
+	event := NewApiPidUpdateResponse(t.GetIndex(), time.UnixNano(), randfloat)
 	message, err := event.Stringify()
 	if err != nil {
 		log.Println("Error stringifying: ", err)

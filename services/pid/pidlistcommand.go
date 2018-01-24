@@ -2,17 +2,40 @@ package pid
 
 import (
 	"encoding/json"
-	"local/gintest/constants"
+	"local/gintest/commons"
 	"local/gintest/services/db"
 	"log"
 	"time"
 )
 
-func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []constants.ApiPid {
-	pids := make([]constants.ApiPid, len(dummyTickersMap))
+type ApiPid struct {
+	Name   string  `json:"name"`
+	Index  int     `json:"index"`
+	Period float32 `json:"period"`
+}
+
+func NewApiPid(name string, index int, period float32) ApiPid {
+	return ApiPid{Name: name, Index: index, Period: period}
+}
+
+type ApiPidListResponse struct {
+	commons.ApiResponseHeader
+	List []ApiPid `json:"pids"`
+}
+
+func NewApiPidListResponse(list []ApiPid) ApiPidListResponse {
+	return ApiPidListResponse{ApiResponseHeader: commons.ApiResponseHeader{Command: commons.PidListCommandResponse}, List: list}
+}
+
+func (r ApiPidListResponse) Stringify() ([]byte, error) {
+	return json.Marshal(r)
+}
+
+func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []ApiPid {
+	pids := make([]ApiPid, len(dummyTickersMap))
 	i := 0
 	for _, pid := range dummyTickersMap {
-		pids[i] = constants.NewApiPid(pid.name, pid.index, float32(pid.period))
+		pids[i] = NewApiPid(pid.name, pid.index, float32(pid.period))
 		i++
 	}
 	return pids
@@ -20,14 +43,14 @@ func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []constants.ApiPid 
 
 func processPIDListCommand(dummyTickersMap map[int]*DummyPIDTicker) ([]byte, error) {
 	pids := getApiPidsList(dummyTickersMap)
-	responseStruct := constants.NewPIDListResponse(pids)
+	responseStruct := NewApiPidListResponse(pids)
 	return responseStruct.Stringify()
 }
 
-func RequestPIDListEventStruct() constants.PIDListResponse {
-	request := constants.NewCommandRequest(constants.PIDListCommandRequest, []byte{})
+func RequestPIDListEventStruct() ApiPidListResponse {
+	request := commons.NewCommandRequest(commons.ApiPidListCommandRequest, []byte{})
 	response := RequestCommand(request)
-	var listResponse constants.PIDListResponse
+	var listResponse ApiPidListResponse
 	err := json.Unmarshal(response, &listResponse)
 	if err != nil {
 		log.Println("On pid RequestApiPids: Error parsing the List Event : ", err)
