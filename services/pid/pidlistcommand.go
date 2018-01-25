@@ -8,34 +8,31 @@ import (
 	"time"
 )
 
-type ApiPid struct {
-	Name   string  `json:"name"`
-	Index  int     `json:"index"`
-	Period float32 `json:"period"`
-}
-
-func NewApiPid(name string, index int, period float32) ApiPid {
-	return ApiPid{Name: name, Index: index, Period: period}
-}
-
 type ApiPidListResponse struct {
 	commons.ApiResponseHeader
-	List []ApiPid `json:"pids"`
+	List []PidData `json:"pids"`
 }
 
-func NewApiPidListResponse(list []ApiPid) ApiPidListResponse {
-	return ApiPidListResponse{ApiResponseHeader: commons.ApiResponseHeader{Command: commons.PidListCommandResponse}, List: list}
+func NewApiPidListResponse(list []PidData) ApiPidListResponse {
+	return ApiPidListResponse{
+		ApiResponseHeader: commons.ApiResponseHeader{
+			Command: commons.PidListCommandResponse,
+		},
+		List: list}
 }
 
 func (r ApiPidListResponse) Stringify() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []ApiPid {
-	pids := make([]ApiPid, len(dummyTickersMap))
+func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []PidData {
+	pids := make([]PidData, len(dummyTickersMap))
 	i := 0
-	for _, pid := range dummyTickersMap {
-		pids[i] = NewApiPid(pid.name, pid.index, float32(pid.period))
+	for _, dummyTicker := range dummyTickersMap {
+		pids[i] = PidData{
+			PidStaticData:  dummyTicker.pidData,
+			PidDynamicData: dummyTicker.getCurrentData(),
+		}
 		i++
 	}
 	return pids
@@ -72,7 +69,11 @@ func SavePidsToDb(t int64) {
 	var dbpids db.DBPids
 	pids := make([]*db.DBPid, len(listEvent.List))
 	for i, pid := range listEvent.List {
-		pids[i] = &db.DBPid{Name: pid.Name, Pid: pid.Index, Period: time.Duration(pid.Period)}
+		pids[i] = &db.DBPid{
+			Name:   pid.Name,
+			Pid:    pid.Index,
+			Period: time.Duration(pid.SamplePeriod),
+		}
 	}
 	dbpids.Timestamp = t
 	dbpids.Pids = pids

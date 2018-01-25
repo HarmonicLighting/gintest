@@ -50,6 +50,7 @@ var refreshCurrentUsersCount = function(message){
 var refreshValues = function(message) {
   var dt = new Date(message.timestamp/1000000);
   $(`#svalue-${message.index}`).html(`${message.value}`);
+  $(`#sstate-${message.index}`).html(`${getSignalStateStr(message.state)}`);
   $(`#sdate-${message.index}`).html(`On ${dt}`);
 }
 
@@ -65,6 +66,9 @@ var refreshSignals = function(message){
     logError(message)
     return
   }
+
+  console.log(message);
+
   signals = message.pids
 
     function compare(a,b) {
@@ -80,21 +84,52 @@ var refreshSignals = function(message){
     var signalsArea = $('#pids-data')
     signalsArea.empty();
     for (var i = 0; i < signals.length; i++) {
+
       signalsArea.append(
         `
         <div class='row'>
           <div class='col-sm-3'>
-            <b>${signals[i].name}</b> (${signals[i].period / 1000000000} s):
+            <b>${signals[i].name}</b> (${getSignalTypeStr(signals[i].type)}, every ${(signals[i].period / 1000000000).toFixed(2)} s):
           </div>
           <div class='col-sm-2' id='svalue-${signals[i].index}'>
+            ${(signals[i].value).toFixed(2)}
           </div>
           <div class='col-sm-2' id='sstate-${signals[i].index}'>
+            ${getSignalStateStr(signals[i].state)}
           </div>
           <div class='col-md-5' id='sdate-${signals[i].index}'>
+            On ${(new Date(signals[i].timestamp/1000000))}
           </div>
         </div>
         `
       );
+    }
+  }
+
+  var getSignalTypeStr = function(sigType){
+    var sigtype
+    switch(sigType){
+      case 0:
+        return 'Analogical'
+      case 1:
+        return 'Discrete'
+      case 2:
+        return 'Logic'
+      default:
+        return `Unknown(${signals[i].type})`
+    }
+  }
+
+  var getSignalStateStr = function(sigState){
+    switch (sigState){
+      case 0:
+        return 'Never Updated'
+      case 1:
+        return 'OK'
+      case 2:
+        return 'Bad'
+      default:
+        return `Unknown (${message.state})`
     }
   }
 

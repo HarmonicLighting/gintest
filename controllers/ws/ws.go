@@ -17,7 +17,7 @@ var upgrader = websocket.Upgrader{
 
 // ServeWs handles websocket requests from the peer.
 func ServeWs(w http.ResponseWriter, r *http.Request) {
-	apid := pid.ApiPid{}
+	apid := pid.BadPidState
 	log.Println(apid)
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

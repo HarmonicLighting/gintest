@@ -19,6 +19,7 @@ const (
 	PidListCommandResponse CommandResponseType = iota
 	PidUpdateCommandResponse
 	NCurrentClientsCommandResponse
+	PidListUpdateCommandResponse
 )
 
 type ApiResponse interface {
