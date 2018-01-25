@@ -25,7 +25,7 @@ func (r ApiPidListResponse) Stringify() ([]byte, error) {
 	return json.Marshal(r)
 }
 
-func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []PidData {
+func getPidDataList(dummyTickersMap map[int]*DummyPIDTicker) []PidData {
 	pids := make([]PidData, len(dummyTickersMap))
 	i := 0
 	for _, dummyTicker := range dummyTickersMap {
@@ -39,7 +39,7 @@ func getApiPidsList(dummyTickersMap map[int]*DummyPIDTicker) []PidData {
 }
 
 func processPIDListCommand(dummyTickersMap map[int]*DummyPIDTicker) ([]byte, error) {
-	pids := getApiPidsList(dummyTickersMap)
+	pids := getPidDataList(dummyTickersMap)
 	responseStruct := NewApiPidListResponse(pids)
 	return responseStruct.Stringify()
 }

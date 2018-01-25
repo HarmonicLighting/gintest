@@ -97,10 +97,8 @@ func Broadcast(message []byte) {
 }
 
 func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.List, connectionsMap map[int32]*Conn) {
-	h.log("There are ", connectionsList.Len(), " connections to broadcast to")
 	for e := connectionsList.Front(); e != nil; e = e.Next() {
 		select {
-
 		// If the channel can not proceed inmediately its because its buffer is full,
 		// so we presume that the connection with the client was lost
 		case e.Value.(*Conn).send <- message:
@@ -110,10 +108,6 @@ func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.
 			close(e.Value.(*Conn).send)
 			h.removeConnection(e.Value.(*Conn), connectionsList, connectionsMap)
 		}
-	}
-
-	if connectionsList.Len() != 0 {
-		h.log("Broadcasting done...")
 	}
 }
 
@@ -145,8 +139,13 @@ func (h *ConnectionsHub) runConnectionsHub() {
 
 			// A message needs to be broadcasted
 		case message := <-h.broadcast:
-			h.log("Broadcasting")
-			h.broadcastMessage(message, connectionsList, connectionsMap)
+			nconn := connectionsList.Len()
+			if nconn > 0 {
+				h.log("Broadcasting to ", nconn, " connections")
+				h.broadcastMessage(message, connectionsList, connectionsMap)
+			} else {
+				h.log("No clients to broadcast")
+			}
 
 			// A command operating on shared resources arrived
 		case request := <-h.incomingNCurrentClientsCommand:

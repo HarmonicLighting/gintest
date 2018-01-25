@@ -6,11 +6,17 @@ import (
 	"fmt"
 	"local/gintest/commons"
 	"local/gintest/services/db"
-	"local/gintest/wslogic"
 	"log"
 	"math"
 	"math/rand"
 	"time"
+)
+
+const (
+	pidTickers              = 10
+	pidTickersMinDuration   = time.Second * 5
+	pidTickersMaxDuration   = time.Second * 10
+	pidTickersRangeDuration = pidTickersMaxDuration - pidTickersMinDuration
 )
 
 var (
@@ -176,7 +182,7 @@ func (t *DummyPIDTicker) Launch() {
 				data.Value, data.State = t.getValueAndState()
 				t.onTick(PidData{PidStaticData: t.pidData, PidDynamicData: data})
 			case channel := <-t.reportCurrentData:
-				t.log("Reporting current dynamic PID Data of ", t.pidData.Name)
+				//t.log("Reporting current dynamic PID Data of ", t.pidData.Name)
 				channel <- data
 				data.Updates = 0
 			}
@@ -185,15 +191,15 @@ func (t *DummyPIDTicker) Launch() {
 }
 
 func standardTickHandler(data PidData) {
-	update := ApiUpdate{Index: data.Index, Value: data.Value, Timestamp: data.LastUpdated, State: data.State}
-	event := NewApiPidUpdateResponse(update)
-	message, err := event.Stringify()
-	if err != nil {
-		log.Println("Error stringifying: ", err)
-		return
-	}
-	log.Println("Broadcasting event ", string(message), " by Dummy Ticker ", data.Name)
-	wslogic.Broadcast(message)
+	//update := ApiUpdate{Index: data.Index, Value: data.Value, Timestamp: data.LastUpdated, State: data.State}
+	//event := NewApiPidUpdateResponse(update)
+	//message, err := event.Stringify()
+	//if err != nil {
+	//log.Println("Error stringifying: ", err)
+	//return
+	//}
+	//log.Println("Broadcasting event ", string(message), " by Dummy Ticker ", data.Name)
+	//wslogic.Broadcast(message)
 	log.Println("Saving sample to DB")
 	d, err := dbase.Copy()
 	if err != nil {

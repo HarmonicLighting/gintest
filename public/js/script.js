@@ -28,10 +28,13 @@ socket.onmessage = function(event) {
       refreshSignals(message)
       break;
     case 1:
-      refreshValues(message)
+      refreshPidValues(message)
       break;
     case 2:
       refreshCurrentUsersCount(message)
+      break;
+    case 3:
+      refresPidListValues(message)
       break;
     default:
       if (message.command < 0) {
@@ -47,11 +50,23 @@ var refreshCurrentUsersCount = function(message){
 }
 
 // Display a message
-var refreshValues = function(message) {
+var refreshPidValues = function(message) {
   var dt = new Date(message.timestamp/1000000);
   $(`#svalue-${message.index}`).html(`${message.value}`);
   $(`#sstate-${message.index}`).html(`${getSignalStateStr(message.state)}`);
   $(`#sdate-${message.index}`).html(`On ${dt}`);
+}
+
+var refresPidListValues = function(message){
+  console.log(message);
+  signals = message.pids
+  for (var i = 0; i < signals.length; i++) {
+    var dt = new Date(signals[i].timestamp/1000000);
+    $(`#svalue-${signals[i].index}`).html(`${signals[i].value}`);
+    $(`#sstate-${signals[i].index}`).html(`${getSignalStateStr(signals[i].state)}`);
+    $(`#sdate-${signals[i].index}`).html(`On ${dt}`);
+  }
+  console.log("Updated ",signals.length, " signals");
 }
 
 var logError = function(message){
@@ -67,7 +82,7 @@ var refreshSignals = function(message){
     return
   }
 
-  console.log(message);
+  //console.log(message);
 
   signals = message.pids
 

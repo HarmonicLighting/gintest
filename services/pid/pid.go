@@ -14,11 +14,6 @@ import (
 const (
 	debugging          = commons.Debugging
 	debugWithTimeStamp = commons.DebugWithTimeStamp
-
-	pidTickers              = 10
-	pidTickersMinDuration   = time.Millisecond * 100
-	pidTickersMaxDuration   = time.Second * 5
-	pidTickersRangeDuration = pidTickersMaxDuration - pidTickersMinDuration
 )
 
 type PidType int
@@ -121,13 +116,20 @@ func (h *PidsHub) runPidsHub() {
 	defer h.log("Exiting Dummy Hub")
 
 	dummyTickersMap := make(map[int]*DummyPIDTicker)
-	//ticker := time.NewTicker(time.Second)
+	ticker := time.NewTicker(time.Millisecond * 500)
 	for {
 
 		select {
 
-		//case tick := <-ticker.C:
-		//	h.log("Ticker sent tick ", tick)
+		case tick := <-ticker.C:
+			//h.log("Ticker sent tick ", tick)
+			responseData, err := processPIDListUpdateCommand(dummyTickersMap)
+			if err != nil {
+				//h.log("Error processing PID List Update Command: ", err)
+				continue
+			}
+			h.log("Broadcasting update of PIDs list of ", tick)
+			wslogic.Broadcast(responseData)
 
 		case pid := <-h.subscribe:
 			h.log("Subscribing dummy ticker ", pid.pidData.Name)
