@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"errors"
 	"fmt"
+	"local/gintest/apicommands"
 	"local/gintest/commons"
 	"log"
 	"time"
@@ -33,7 +34,7 @@ type ConnectionsHub struct {
 	unregister chan *Conn
 
 	// Attend Number of current Clients Command requests.
-	incomingNCurrentClientsCommand chan commons.CommandRequest
+	incomingNCurrentClientsCommand chan CommandRequest
 }
 
 var connectionsHub = ConnectionsHub{
@@ -41,7 +42,7 @@ var connectionsHub = ConnectionsHub{
 	send:                           make(chan clientMessage),
 	register:                       make(chan *Conn),
 	unregister:                     make(chan *Conn),
-	incomingNCurrentClientsCommand: make(chan commons.CommandRequest),
+	incomingNCurrentClientsCommand: make(chan CommandRequest),
 }
 
 func (h *ConnectionsHub) log(v ...interface{}) {
@@ -192,7 +193,8 @@ func (h *ConnectionsHub) runConnectionsHub() {
 			// The generic way would be something like
 			// request.Response <- request.ConnectionsHubResponseFunction(connectionsList)
 			responseData := processNCurrentClientsCommand(connectionsList)
-			request.Response <- responseData
+			request.SendCommandResponse(responseData)
+			//request.Response <- responseData
 
 		case <-staticsTicker.C:
 			h.log("Connections Hub Statics of the last munute: ", nBroadcasts, " broadcasts handled\t\t\t\t", nRegistered, " connections registered\t\t\t\t", nUnregistered, " connections unregistered")
@@ -210,7 +212,7 @@ func Init() {
 
 	log.Println("INIT ConnectionsHUB.GO >>> ", commons.GetInitCounter())
 
-	RegisterMessagesHandler(RequestMessagesHandler{RequestType: commons.ApiNCurrentClientsCommandRequest, Handler: connectionsHub.requestNCurrentClientsCommand})
+	RegisterMessagesHandler(RequestMessagesHandler{requestType: apicommands.ServerNConnectionsPush, handler: connectionsHub.requestNCurrentClientsCommand})
 	log.Println("INIT ConnectionsHUB.GO >>> Back from registering messages handler")
 	go connectionsHub.runConnectionsHub()
 

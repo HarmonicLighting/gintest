@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"local/gintest/commons"
+	"local/gintest/apicommands"
 	"local/gintest/services/db"
+	"local/gintest/wslogic"
 	"log"
 	"math"
 	"math/rand"
@@ -35,14 +36,14 @@ type ApiUpdate struct {
 }
 
 type ApiPidUpdateResponse struct {
-	commons.ApiResponseHeader
+	wslogic.ApiResponseHeader
 	ApiUpdate
 }
 
 func NewApiPidUpdateResponse(update ApiUpdate) ApiPidUpdateResponse {
 	return ApiPidUpdateResponse{
-		ApiResponseHeader: commons.ApiResponseHeader{
-			Command: commons.PidUpdateCommandResponse,
+		ApiResponseHeader: wslogic.ApiResponseHeader{
+			Command: apicommands.ServerSignalUpdatePush,
 		},
 		ApiUpdate: update,
 	}

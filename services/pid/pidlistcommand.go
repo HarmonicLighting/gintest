@@ -2,21 +2,22 @@ package pid
 
 import (
 	"encoding/json"
-	"local/gintest/commons"
+	"local/gintest/apicommands"
 	"local/gintest/services/db"
+	"local/gintest/wslogic"
 	"log"
 	"time"
 )
 
 type ApiPidListResponse struct {
-	commons.ApiResponseHeader
+	wslogic.ApiResponseHeader
 	List []PidData `json:"pids"`
 }
 
 func NewApiPidListResponse(list []PidData) ApiPidListResponse {
 	return ApiPidListResponse{
-		ApiResponseHeader: commons.ApiResponseHeader{
-			Command: commons.PidListCommandResponse,
+		ApiResponseHeader: wslogic.ApiResponseHeader{
+			Command: apicommands.ServerCompleteSignalList,
 		},
 		List: list}
 }
@@ -45,7 +46,7 @@ func processPIDListCommand(dummyTickersMap map[int]*DummyPIDTicker) ([]byte, err
 }
 
 func RequestPIDListEventStruct() ApiPidListResponse {
-	request := commons.NewCommandRequest(commons.ApiPidListCommandRequest, []byte{})
+	request := wslogic.NewCommandRequest(apicommands.ServerCompleteSignalList, []byte{})
 	response := RequestPidList(request)
 	var listResponse ApiPidListResponse
 	err := json.Unmarshal(response, &listResponse)

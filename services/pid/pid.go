@@ -2,6 +2,7 @@ package pid
 
 import (
 	"fmt"
+	"local/gintest/apicommands"
 	"local/gintest/commons"
 	"local/gintest/services/db"
 	"local/gintest/wslogic"
@@ -67,8 +68,8 @@ type PidsHub struct {
 	subscribe   chan *DummyPIDTicker
 	unsubscribe chan *DummyPIDTicker
 
-	incomingPidListRequest       chan commons.CommandRequest
-	incomingPidListUpdateRequest chan commons.CommandRequest
+	incomingPidListRequest       chan wslogic.CommandRequest
+	incomingPidListUpdateRequest chan wslogic.CommandRequest
 }
 
 func (h *PidsHub) log(v ...interface{}) {
@@ -96,8 +97,8 @@ var pidsHub = PidsHub{
 	subscribe:   make(chan *DummyPIDTicker),
 	unsubscribe: make(chan *DummyPIDTicker),
 
-	incomingPidListRequest:       make(chan commons.CommandRequest),
-	incomingPidListUpdateRequest: make(chan commons.CommandRequest),
+	incomingPidListRequest:       make(chan wslogic.CommandRequest),
+	incomingPidListUpdateRequest: make(chan wslogic.CommandRequest),
 }
 
 func Subscribe(pid *DummyPIDTicker) {
@@ -108,9 +109,9 @@ func Unsubscribe(pid *DummyPIDTicker) {
 	pidsHub.unsubscribe <- pid
 }
 
-func RequestPidList(request commons.CommandRequest) commons.RawResponseData {
+func RequestPidList(request wslogic.CommandRequest) wslogic.RawResponseData {
 	pidsHub.incomingPidListRequest <- request
-	return <-request.Response
+	return request.ReceiveCommandResponse()
 }
 
 func (h *PidsHub) runPidsHub() {
@@ -148,10 +149,13 @@ func (h *PidsHub) runPidsHub() {
 				h.log("Error processing PID List Command: ", err)
 			}
 			h.log("Dispatched!-----------------------------------------------------")
-			request.Response <- responseData
+			request.SendCommandResponse(responseData)
+			//request.Response <- responseData
 
 		case request := <-h.incomingPidListUpdateRequest:
-			request.Response <- []byte{}
+			request.SendCommandResponse([]byte{})
+			h.log(">>>>>>>>> DISPATCHED AN EMPTY COMMAND RESPONSE")
+			//request.Response <- []byte{}
 		}
 	}
 }
@@ -159,7 +163,8 @@ func (h *PidsHub) runPidsHub() {
 func Init() {
 
 	log.Println("INIT PID.GO >>> ", commons.GetInitCounter())
-	wslogic.RegisterMessagesHandler(wslogic.RequestMessagesHandler{RequestType: commons.ApiPidListCommandRequest, Handler: RequestPidList})
+	wslogic.RegisterMessagesHandler(
+		wslogic.NewRequestMessageHandler(apicommands.ServerCompleteSignalList, RequestPidList))
 	log.Println("INIT PID.GO >>> Back from registering messages handler")
 	go pidsHub.runPidsHub()
 

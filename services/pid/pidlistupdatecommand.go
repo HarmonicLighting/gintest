@@ -3,7 +3,8 @@ package pid
 import (
 	"encoding/json"
 	"errors"
-	"local/gintest/commons"
+	"local/gintest/apicommands"
+	"local/gintest/wslogic"
 )
 
 type PidIndexedDynamicData struct {
@@ -12,14 +13,14 @@ type PidIndexedDynamicData struct {
 }
 
 type ApiPidListUpdateResponse struct {
-	commons.ApiResponseHeader
+	wslogic.ApiResponseHeader
 	List []PidIndexedDynamicData `json:"pids"`
 }
 
 func NewApiPidListUpdateResponse(list []PidIndexedDynamicData) ApiPidListUpdateResponse {
 	return ApiPidListUpdateResponse{
-		ApiResponseHeader: commons.ApiResponseHeader{
-			Command: commons.PidListUpdateCommandResponse,
+		ApiResponseHeader: wslogic.ApiResponseHeader{
+			Command: apicommands.ServerSignalUpdateListPush,
 		},
 		List: list}
 }

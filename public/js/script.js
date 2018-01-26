@@ -13,36 +13,38 @@ window.onload = function() {
 
 var onsocketopen = function (event) {
   console.log("Connected!");
-  var command = {command:0}
+  var command = {command:1}
   var jsonCommand = JSON.stringify(command)
   socket.send(jsonCommand)
 };
 
-var updateLastDate = function(date) {
-  $(`#lastMessageTime`).html(`${date}`);
-}
-
  var onsocketmessage = function(event) {
 
-  var dt = new Date(Date.now())
-  updateLastDate(dt)
 
   var message = JSON.parse(event.data)
 
-  //console.log(message);
-
+  if(!message.hasOwnProperty('status')){
+    console.warn("This message doesn't include a status field");
+    console.log(message);
+    return
+  }
+  if(message.status < 0){
+    console.warn(`This message's status is negative! (${message.status})`);
+    console.warn(`Error description: ${message.error}`);
+    return
+  }
 
   switch (message.command) {
-    case 0:
+    case 1:
       refreshSignals(message)
       break;
-    case 1:
+    case 4:
       refreshPidValues(message)
       break;
-    case 2:
+    case 3:
       refreshCurrentUsersCount(message)
       break;
-    case 3:
+    case 2:
       refresPidListValues(message)
       break;
     default:
@@ -84,6 +86,7 @@ var refresPidListValues = function(message){
 }
 
 var logError = function(message){
+  console.warn(`Got command ${message.command}`);
   if(message.status < 0){
     console.warn(`Error in Response Command ${message.command}. Status: ${message.status}, Message: ${message.error} `);
   }
