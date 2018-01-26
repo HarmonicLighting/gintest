@@ -14,6 +14,8 @@ import (
 const (
 	debugging          = commons.Debugging
 	debugWithTimeStamp = commons.DebugWithTimeStamp
+
+	pidListUpdateTimePeriod = time.Millisecond * 250
 )
 
 type PidType int
@@ -116,23 +118,22 @@ func (h *PidsHub) runPidsHub() {
 	defer h.log("Exiting Dummy Hub")
 
 	dummyTickersMap := make(map[int]*DummyPIDTicker)
-	ticker := time.NewTicker(time.Millisecond * 500)
+	ticker := time.NewTicker(pidListUpdateTimePeriod)
 	for {
 
 		select {
 
-		case tick := <-ticker.C:
+		case <-ticker.C:
 			//h.log("Ticker sent tick ", tick)
 			responseData, err := processPIDListUpdateCommand(dummyTickersMap)
 			if err != nil {
 				//h.log("Error processing PID List Update Command: ", err)
 				continue
 			}
-			h.log("Broadcasting update of PIDs list of ", tick)
 			wslogic.Broadcast(responseData)
 
 		case pid := <-h.subscribe:
-			h.log("Subscribing dummy ticker ", pid.pidData.Name)
+			//h.log("Subscribing dummy ticker ", pid.pidData.Name)
 			dummyTickersMap[pid.pidData.Index] = pid
 
 		case pid := <-h.unsubscribe:
@@ -146,6 +147,7 @@ func (h *PidsHub) runPidsHub() {
 			if err != nil {
 				h.log("Error processing PID List Command: ", err)
 			}
+			h.log("Dispatched!-----------------------------------------------------")
 			request.Response <- responseData
 
 		case request := <-h.incomingPidListUpdateRequest:
@@ -171,6 +173,8 @@ func Init() {
 		Subscribe(t)
 		t.Launch()
 	}
+
+	log.Println("A total of ", pidTickers, " dummy tickers have been launched")
 
 	var err error
 	dbase, err = db.Dial()

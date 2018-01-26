@@ -117,11 +117,15 @@ func (h *ConnectionsHub) runConnectionsHub() {
 	connectionsList := list.New()
 	connectionsMap := make(map[int32]*Conn)
 
+	staticsTicker := time.NewTicker(time.Minute)
+	defer staticsTicker.Stop()
+	var nRegistered, nUnregistered, nBroadcasts int
 	for {
 		select {
 
 		// A new connection arrived to be registered
 		case conn := <-h.register:
+			nRegistered++
 			h.log("Registering a connection")
 			h.registerConnection(conn, connectionsList, connectionsMap)
 
@@ -130,6 +134,7 @@ func (h *ConnectionsHub) runConnectionsHub() {
 
 			// A connection needs to be deleted
 		case conn := <-h.unregister:
+			nUnregistered++
 			h.log("Unregistering a connection")
 
 			h.removeConnection(conn, connectionsList, connectionsMap)
@@ -139,12 +144,13 @@ func (h *ConnectionsHub) runConnectionsHub() {
 
 			// A message needs to be broadcasted
 		case message := <-h.broadcast:
+			nBroadcasts++
 			nconn := connectionsList.Len()
 			if nconn > 0 {
-				h.log("Broadcasting to ", nconn, " connections")
+				//h.log("Broadcasting to ", nconn, " connections")
 				h.broadcastMessage(message, connectionsList, connectionsMap)
 			} else {
-				h.log("No clients to broadcast")
+				//h.log("No clients to broadcast")
 			}
 
 			// A command operating on shared resources arrived
@@ -154,6 +160,12 @@ func (h *ConnectionsHub) runConnectionsHub() {
 			// request.Response <- request.ConnectionsHubResponseFunction(connectionsList)
 			responseData := processNCurrentClientsCommand(connectionsList)
 			request.Response <- responseData
+
+		case <-staticsTicker.C:
+			h.log("Connections Hub Statics of the last munute: ", nBroadcasts, " broadcasts handled\t\t\t\t", nRegistered, " connections registered\t\t\t\t", nUnregistered, " connections unregistered")
+			nBroadcasts = 0
+			nRegistered = 0
+			nUnregistered = 0
 		}
 	}
 }

@@ -63,6 +63,17 @@ func UnregisterMessagesHandler(handler RequestMessagesHandler) {
 	messagesHub.unregisterHandler <- handler
 }
 
+func safeSend(send chan []byte, msg []byte) error {
+	var err error
+	defer func() {
+		if x := recover(); x != nil {
+			err = fmt.Errorf("Unable to send msg: %v", x)
+		}
+	}()
+	send <- msg
+	return err
+}
+
 func (h *MessagesHub) runMessagesHub() {
 
 	requestHandlersMap := make(map[commons.CommandRequestType]MessageHandler)
@@ -95,7 +106,10 @@ func (h *MessagesHub) runMessagesHub() {
 				h.log("Error unmarshalling the event command ", string(clientMessage.message), ": ", err)
 				badRequestResponse := commons.NewBadRequestApiResponse()
 				response, _ := badRequestResponse.Stringify()
-				clientMessage.conn.send <- response
+				err = safeSend(clientMessage.conn.send, response)
+				if err != nil {
+					h.log("RECOVERED FROM A PANIC! ", err)
+				}
 			} else {
 
 				handler, ok := requestHandlersMap[cmm.Command]
@@ -103,13 +117,19 @@ func (h *MessagesHub) runMessagesHub() {
 					h.log("The request command ", cmm.Command, " will be processed.")
 					rc := commons.NewCommandRequest(cmm.Command, clientMessage.message)
 					response := handler(rc)
-					clientMessage.conn.send <- response
+					err = safeSend(clientMessage.conn.send, response)
+					if err != nil {
+						h.log("RECOVERED FROM A PANIC! ", err)
+					}
 				} else {
 					// No handler with the command id has been registered
 					h.log("The request command ", cmm.Command, " is not supported.")
 					notSupportedResponse := commons.NewNotSupportedStatusApiResponse(cmm.Command)
 					response, _ := notSupportedResponse.Stringify()
-					clientMessage.conn.send <- response
+					err = safeSend(clientMessage.conn.send, response)
+					if err != nil {
+						h.log("RECOVERED FROM A PANIC! ", err)
+					}
 				}
 			}
 		}

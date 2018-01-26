@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	pidTickers              = 10
-	pidTickersMinDuration   = time.Second * 5
-	pidTickersMaxDuration   = time.Second * 10
+	pidTickers              = 10000
+	pidTickersMinDuration   = time.Millisecond * 100
+	pidTickersMaxDuration   = time.Second * 2
 	pidTickersRangeDuration = pidTickersMaxDuration - pidTickersMinDuration
 )
 
@@ -63,23 +63,22 @@ type DummyPidTickerFunc func(PidData)
 
 type DummyPIDTicker struct {
 	pidData           PidStaticData
-	ticker            *time.Ticker
 	onTick            DummyPidTickerFunc
 	stop              chan struct{}
 	reportCurrentData chan chan PidDynamicData
+	valueUpdated      chan struct{}
 	isRunning         bool
 }
 
 func NewDummyPIDTicker(pidData PidStaticData, onTick DummyPidTickerFunc) *DummyPIDTicker {
-	ticker := &DummyPIDTicker{
+	return &DummyPIDTicker{
 		pidData:           pidData,
-		ticker:            nil,
 		onTick:            onTick,
 		stop:              make(chan struct{}),
 		reportCurrentData: make(chan chan PidDynamicData),
+		valueUpdated:      make(chan struct{}, 1),
 		isRunning:         false,
 	}
-	return ticker
 }
 
 func (t *DummyPIDTicker) getValueAndState() (float32, PidState) {
@@ -113,6 +112,21 @@ func (t *DummyPIDTicker) getCurrentData() PidDynamicData {
 	currentDataCh := make(chan PidDynamicData)
 	t.reportCurrentData <- currentDataCh
 	return <-currentDataCh
+}
+
+func (t *DummyPIDTicker) getCurrentDataIfUpdated() (PidDynamicData, bool) {
+	if !t.isRunning {
+		return PidDynamicData{State: InternalErrorPidState}, false
+	}
+
+	select {
+	case <-t.valueUpdated: // There was already an updated value
+		currentDataCh := make(chan PidDynamicData)
+		t.reportCurrentData <- currentDataCh
+		return <-currentDataCh, true
+	default: // No new value
+		return PidDynamicData{}, false
+	}
 }
 
 func (t *DummyPIDTicker) log(v ...interface{}) {
@@ -153,16 +167,19 @@ func (t *DummyPIDTicker) Launch() {
 
 	t.isRunning = true
 
-	t.ticker = time.NewTicker(t.pidData.SamplePeriod)
+	ticker := time.NewTicker(t.pidData.SamplePeriod)
+	logTicker := time.NewTicker(time.Second * 30)
 
 	go func() {
 
 		defer func() {
-			t.ticker.Stop()
-			t.ticker = nil
+			ticker.Stop()
+			logTicker.Stop()
 			t.isRunning = false
 		}()
 
+		nTicks := 0
+		nReports := 0
 		var data PidDynamicData
 		data.LastUpdated = time.Now().UnixNano()
 		data.State = NeverUpdatedPidState
@@ -174,17 +191,29 @@ func (t *DummyPIDTicker) Launch() {
 				t.log("Stopping the Dummy Ticker ", t.pidData.Name)
 				return
 
+				// Log time
+			case <-logTicker.C:
+				t.log("The Dummy PID has ticked ", nTicks, " times during this period.\n\t\t\t\t\t\tTotal data reports: ", nReports)
+				nTicks = 0
+
 				// Ticker signal, continue normal ticking
-			case now := <-t.ticker.C:
-				t.log("Got a tick for Dummy Ticker ", t.pidData.Name)
+			case now := <-ticker.C:
+				nTicks++
+				//t.log("Got a tick for Dummy Ticker ", t.pidData.Name)
 				data.LastUpdated = now.UnixNano()
-				data.Updates++
 				data.Value, data.State = t.getValueAndState()
+				select {
+				case t.valueUpdated <- struct{}{}:
+					//t.log("Flagging an updated value for dummy pid ", t.pidData.Name)
+					data.Updates = 1
+				default:
+					data.Updates++
+				}
 				t.onTick(PidData{PidStaticData: t.pidData, PidDynamicData: data})
 			case channel := <-t.reportCurrentData:
 				//t.log("Reporting current dynamic PID Data of ", t.pidData.Name)
 				channel <- data
-				data.Updates = 0
+				nReports++
 			}
 		}
 	}()
@@ -200,12 +229,15 @@ func standardTickHandler(data PidData) {
 	//}
 	//log.Println("Broadcasting event ", string(message), " by Dummy Ticker ", data.Name)
 	//wslogic.Broadcast(message)
-	log.Println("Saving sample to DB")
-	d, err := dbase.Copy()
-	if err != nil {
-		log.Println("Error copying the db session: ", err)
-		return
-	}
-	defer d.Close()
-	d.InsertSamples(&db.DBSample{Pid: data.Index, Value: data.Value, Timestamp: data.LastUpdated})
+	//.Println("Saving sample to DB")
+	//ti := time.Now().UnixNano()
+	//d, err := dbase.Copy()
+	//if err != nil {
+	//	log.Println("Error copying the db session: ", err)
+	//	return
+	//}
+	//defer d.Close()
+	//d.InsertSamples(&db.DBSample{Pid: data.Index, Value: data.Value, Timestamp: data.LastUpdated})
+	//tt := time.Now().UnixNano() - ti
+	//log.Println("Total mong time: ", tt, " ns")
 }

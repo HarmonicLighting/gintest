@@ -32,11 +32,11 @@ func getPidIndexedDynamicDataList(dummyTickersMap map[int]*DummyPIDTicker) []Pid
 	var pids []PidIndexedDynamicData
 	//:= make([]PidIndexedDynamicData, len(dummyTickersMap))
 	for _, dummyTicker := range dummyTickersMap {
-		pid := PidIndexedDynamicData{
-			Index:          dummyTicker.pidData.Index,
-			PidDynamicData: dummyTicker.getCurrentData(),
-		}
-		if pid.Updates > 0 {
+		if data, ok := dummyTicker.getCurrentDataIfUpdated(); ok {
+			pid := PidIndexedDynamicData{
+				Index:          dummyTicker.pidData.Index,
+				PidDynamicData: data,
+			}
 			pids = append(pids, pid)
 		}
 	}
@@ -46,9 +46,12 @@ func getPidIndexedDynamicDataList(dummyTickersMap map[int]*DummyPIDTicker) []Pid
 func processPIDListUpdateCommand(dummyTickersMap map[int]*DummyPIDTicker) ([]byte, error) {
 	pids := getPidIndexedDynamicDataList(dummyTickersMap)
 	//log.Println("Updating list with ", len(pids), " signals")
-	if len(pids) < 1 {
-		return nil, errors.New("There are no updates to notify")
-	}
+	npids := len(pids)
 	responseStruct := NewApiPidListUpdateResponse(pids)
-	return responseStruct.Stringify()
+	data, _ := responseStruct.Stringify()
+	if npids < 1 {
+		return data, errors.New("There are no updates to notify")
+	}
+	//log.Println("There are ", npids, " pids to update")
+	return data, nil
 }

@@ -130,7 +130,7 @@ func (c *Conn) WritePump() {
 	for {
 		select {
 		case message, ok := <-c.send:
-			c.log("message to be sent arrived")
+			//c.log("message to be sent arrived")
 			if !ok {
 				// The hub closed the channel.
 				c.log("The hub closed this connection")
