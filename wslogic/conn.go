@@ -36,6 +36,8 @@ var (
 	sessionCounter int32
 )
 
+type connectionID int32
+
 // Conn is an middleman between the websocket connection and the hub.
 type Conn struct {
 	// The websocket connection.
@@ -44,21 +46,26 @@ type Conn struct {
 	// Buffered channel of outbound messages.
 	send chan []byte
 
-	connID int32
+	connID connectionID
 }
 
 type clientMessage struct {
-	conn    *Conn
-	message []byte
+	connID      connectionID
+	fromMessage []byte
+	toMessage   []byte
 }
 
-func newClientMessage(conn *Conn, message []byte) clientMessage {
-	return clientMessage{conn: conn, message: message}
+func (cm *clientMessage) setResponseMessage(message []byte) {
+	cm.toMessage = message
+}
+
+func newClientMessage(conn *Conn, fromMessage []byte) clientMessage {
+	return clientMessage{connID: conn.connID, fromMessage: fromMessage}
 }
 
 // NewConn returns a new Connection to work with a session
 func NewConn(ws *websocket.Conn) *Conn {
-	return &Conn{ws: ws, send: make(chan []byte, sizeMsgChanBuffer), connID: atomic.AddInt32(&sessionCounter, 1) - 1}
+	return &Conn{ws: ws, send: make(chan []byte, sizeMsgChanBuffer), connID: connectionID(atomic.AddInt32(&sessionCounter, 1) - 1)}
 }
 
 func (c *Conn) log(v ...interface{}) {

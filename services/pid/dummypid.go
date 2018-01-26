@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	pidTickers              = 10000
+	pidTickers              = 1000
 	pidTickersMinDuration   = time.Millisecond * 100
 	pidTickersMaxDuration   = time.Second * 2
 	pidTickersRangeDuration = pidTickersMaxDuration - pidTickersMinDuration

@@ -101,35 +101,29 @@ func (h *MessagesHub) runMessagesHub() {
 			// handle an incoming message depending on it's request type
 		case clientMessage := <-h.incomingMessage:
 			var cmm commons.ApiRequestHeader
-			err := json.Unmarshal(clientMessage.message, &cmm)
+			err := json.Unmarshal(clientMessage.fromMessage, &cmm)
 			if err != nil {
-				h.log("Error unmarshalling the event command ", string(clientMessage.message), ": ", err)
+				h.log("Error unmarshalling the event command ", string(clientMessage.fromMessage), ": ", err)
 				badRequestResponse := commons.NewBadRequestApiResponse()
 				response, _ := badRequestResponse.Stringify()
-				err = safeSend(clientMessage.conn.send, response)
-				if err != nil {
-					h.log("RECOVERED FROM A PANIC! ", err)
-				}
+				clientMessage.setResponseMessage(response)
+				Send(clientMessage)
 			} else {
 
 				handler, ok := requestHandlersMap[cmm.Command]
 				if ok {
 					h.log("The request command ", cmm.Command, " will be processed.")
-					rc := commons.NewCommandRequest(cmm.Command, clientMessage.message)
+					rc := commons.NewCommandRequest(cmm.Command, clientMessage.fromMessage)
 					response := handler(rc)
-					err = safeSend(clientMessage.conn.send, response)
-					if err != nil {
-						h.log("RECOVERED FROM A PANIC! ", err)
-					}
+					clientMessage.setResponseMessage(response)
+					Send(clientMessage)
 				} else {
 					// No handler with the command id has been registered
 					h.log("The request command ", cmm.Command, " is not supported.")
 					notSupportedResponse := commons.NewNotSupportedStatusApiResponse(cmm.Command)
 					response, _ := notSupportedResponse.Stringify()
-					err = safeSend(clientMessage.conn.send, response)
-					if err != nil {
-						h.log("RECOVERED FROM A PANIC! ", err)
-					}
+					clientMessage.setResponseMessage(response)
+					Send(clientMessage)
 				}
 			}
 		}

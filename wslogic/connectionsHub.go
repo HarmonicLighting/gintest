@@ -2,6 +2,7 @@ package wslogic
 
 import (
 	"container/list"
+	"errors"
 	"fmt"
 	"local/gintest/commons"
 	"log"
@@ -22,6 +23,9 @@ type ConnectionsHub struct {
 	// Messages to broadcast to all the connections
 	broadcast chan []byte
 
+	// Messages to send to a specific client
+	send chan clientMessage
+
 	// Register requests from the connections.
 	register chan *Conn
 
@@ -33,8 +37,8 @@ type ConnectionsHub struct {
 }
 
 var connectionsHub = ConnectionsHub{
-
 	broadcast:                      make(chan []byte),
+	send:                           make(chan clientMessage),
 	register:                       make(chan *Conn),
 	unregister:                     make(chan *Conn),
 	incomingNCurrentClientsCommand: make(chan commons.CommandRequest),
@@ -61,7 +65,7 @@ func (h *ConnectionsHub) logf(format string, v ...interface{}) {
 	}
 }
 
-func (h *ConnectionsHub) removeConnection(conn *Conn, connectionsList *list.List, connectionsMap map[int32]*Conn) {
+func (h *ConnectionsHub) removeConnection(conn *Conn, connectionsList *list.List, connectionsMap map[connectionID]*Conn) {
 
 	delete(connectionsMap, conn.connID)
 
@@ -78,7 +82,7 @@ func (h *ConnectionsHub) removeConnection(conn *Conn, connectionsList *list.List
 	h.log("The connection was not found into the list")
 }
 
-func (h *ConnectionsHub) registerConnection(conn *Conn, connectionsList *list.List, connectionsMap map[int32]*Conn) {
+func (h *ConnectionsHub) registerConnection(conn *Conn, connectionsList *list.List, connectionsMap map[connectionID]*Conn) {
 	connectionsMap[conn.connID] = conn
 	connectionsList.PushBack(conn)
 	h.log("There are now ", connectionsList.Len(), " (", len(connectionsMap), " in map) active connections")
@@ -96,7 +100,11 @@ func Broadcast(message []byte) {
 	connectionsHub.broadcast <- message
 }
 
-func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.List, connectionsMap map[int32]*Conn) {
+func Send(cmessage clientMessage) {
+	connectionsHub.send <- cmessage
+}
+
+func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.List, connectionsMap map[connectionID]*Conn) {
 	for e := connectionsList.Front(); e != nil; e = e.Next() {
 		select {
 		// If the channel can not proceed inmediately its because its buffer is full,
@@ -111,11 +119,32 @@ func (h *ConnectionsHub) broadcastMessage(message []byte, connectionsList *list.
 	}
 }
 
+func (h *ConnectionsHub) sendMessage(cMessage clientMessage, connectionsList *list.List, connectionsMap map[connectionID]*Conn) error {
+	for e := connectionsList.Front(); e != nil; e = e.Next() {
+		conn := e.Value.(*Conn)
+		if conn.connID == cMessage.connID {
+			select {
+			// The message was successfully queued up
+			case conn.send <- cMessage.toMessage:
+				h.log("A message focused towards the connection ", cMessage.connID, " was queued up")
+				return nil
+			default:
+				h.log("Removing connection ", e.Value.(Conn).connID, ", unable to send message (client message queue full)")
+				close(e.Value.(*Conn).send)
+				h.removeConnection(e.Value.(*Conn), connectionsList, connectionsMap)
+				return errors.New("The client connection was found, but it's message queue was full")
+			}
+		}
+
+	}
+	return errors.New(fmt.Sprint("The client with connection id ", cMessage.connID, " was not found in the connections list"))
+}
+
 func (h *ConnectionsHub) runConnectionsHub() {
 
 	// The shared variables are declared in the beginning
 	connectionsList := list.New()
-	connectionsMap := make(map[int32]*Conn)
+	connectionsMap := make(map[connectionID]*Conn)
 
 	staticsTicker := time.NewTicker(time.Minute)
 	defer staticsTicker.Stop()
@@ -152,7 +181,11 @@ func (h *ConnectionsHub) runConnectionsHub() {
 			} else {
 				//h.log("No clients to broadcast")
 			}
-
+		case cMessage := <-h.send:
+			err := h.sendMessage(cMessage, connectionsList, connectionsMap)
+			if err != nil {
+				h.log(err)
+			}
 			// A command operating on shared resources arrived
 		case request := <-h.incomingNCurrentClientsCommand:
 			h.log("Dispatching NCurrentClients Command")

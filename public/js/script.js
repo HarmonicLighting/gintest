@@ -68,6 +68,8 @@ var refreshPidValues = function(message) {
 
 var refresPidListValues = function(message){
   signals = message.pids
+
+  $('#lastSignalUpdate').html(signals.length);
   for (var i = 0; i < signals.length ; i++){
     signalsArray[signals[i].index].value = signals[i].value
     signalsArray[signals[i].index].state = signals[i].state
@@ -79,7 +81,6 @@ var refresPidListValues = function(message){
       $(`#sdate-${signals[i].index}`).html(`On ${dt}`);
     }
   }
-  console.log("Updated ",signals.length, " signals");
 }
 
 var logError = function(message){
@@ -110,6 +111,7 @@ var refreshSignals = function(message){
     signals.sort(compare)
 
     signalsArray = signals
+    $('#totalSignals').html(signals.length);
 
     var signalsArea = $('#pids-data')
     signalsArea.empty();
