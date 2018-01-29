@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"local/gintest/apicommands"
 	"local/gintest/services/db"
+	"local/gintest/services/dbheap"
 	"local/gintest/wslogic"
 	"log"
 	"time"
@@ -58,7 +59,7 @@ func RequestPIDListEventStruct() ApiPidListResponse {
 
 func SavePidsToDb(t int64) {
 
-	d, err := dbase.Copy()
+	d, err := dbheap.GetSession()
 	if err != nil {
 		log.Println("Error copying session")
 		return
@@ -78,5 +79,5 @@ func SavePidsToDb(t int64) {
 	}
 	dbpids.Timestamp = t
 	dbpids.Pids = pids
-	dbase.InsertPids(dbpids)
+	d.ClientSession.InsertPids(dbpids)
 }

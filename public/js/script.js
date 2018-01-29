@@ -77,9 +77,15 @@ var refresPidListValues = function(message){
     signalsArray[signals[i].index].state = signals[i].state
     signalsArray[signals[i].index].timestamp = signals[i].timestamp
     if( signals[i].index <100){
+      var rmvclass
+      var addclass
+      if(signals[i].state == 1){
+        rmvclass = 'badSignal'
+        addclass = 'okSignal'
+      }
       var dt = new Date(signals[i].timestamp/1000000);
       $(`#svalue-${signals[i].index}`).html(`${signals[i].value}`);
-      $(`#sstate-${signals[i].index}`).html(`${getSignalStateStr(signals[i].state)}`);
+      $(`#sstate-${signals[i].index}`).html(`${getSignalStateStr(signals[i].state)}`)
       $(`#sdate-${signals[i].index}`).html(`On ${dt}`);
     }
   }

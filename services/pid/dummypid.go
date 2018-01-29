@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"local/gintest/apicommands"
 	"local/gintest/services/db"
+	"local/gintest/services/dbheap"
 	"local/gintest/wslogic"
 	"log"
 	"math"
@@ -22,10 +23,6 @@ const (
 
 var (
 	pidIndexCounter int32
-)
-
-var (
-	dbase *db.DB
 )
 
 type ApiUpdate struct {
@@ -221,24 +218,14 @@ func (t *DummyPIDTicker) Launch() {
 }
 
 func standardTickHandler(data PidData) {
-	//update := ApiUpdate{Index: data.Index, Value: data.Value, Timestamp: data.LastUpdated, State: data.State}
-	//event := NewApiPidUpdateResponse(update)
-	//message, err := event.Stringify()
-	//if err != nil {
-	//log.Println("Error stringifying: ", err)
-	//return
-	//}
-	//log.Println("Broadcasting event ", string(message), " by Dummy Ticker ", data.Name)
-	//wslogic.Broadcast(message)
-	//.Println("Saving sample to DB")
-	//ti := time.Now().UnixNano()
-	//d, err := dbase.Copy()
-	//if err != nil {
-	//	log.Println("Error copying the db session: ", err)
-	//	return
-	//}
-	//defer d.Close()
-	//d.InsertSamples(&db.DBSample{Pid: data.Index, Value: data.Value, Timestamp: data.LastUpdated})
-	//tt := time.Now().UnixNano() - ti
-	//log.Println("Total mong time: ", tt, " ns")
+	d, err := dbheap.GetSession()
+	if err != nil {
+		log.Println("Error getting session ", err)
+		return
+	}
+	defer d.Close()
+	err = d.ClientSession.InsertSamples(&db.DBSample{Pid: data.Index, Value: data.Value, Timestamp: data.LastUpdated})
+	if err != nil {
+		log.Println("Error inserting sample ", err)
+	}
 }

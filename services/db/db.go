@@ -88,7 +88,7 @@ func (d *DB) InsertSamples(samples ...*DBSample) error {
 
 	err := d.samplesC.Insert(isamples...)
 	if err != nil {
-		d.logger.Println("Error inserting Samples: ", err)
+		//d.logger.Println("Error inserting Samples: ", err)
 	}
 	return err
 }

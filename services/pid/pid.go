@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"local/gintest/apicommands"
 	"local/gintest/commons"
-	"local/gintest/services/db"
 	"local/gintest/wslogic"
 	"log"
 	"math/rand"
@@ -181,12 +180,6 @@ func Init() {
 
 	log.Println("A total of ", pidTickers, " dummy tickers have been launched")
 
-	var err error
-	dbase, err = db.Dial()
-	if err != nil {
-		log.Println(">>>>>>>    Error dialing to the DB: ", err)
-	} else {
-		SavePidsToDb(now)
-	}
+	SavePidsToDb(now)
 
 }
