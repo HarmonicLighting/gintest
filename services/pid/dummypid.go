@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"local/gintest/apicommands"
-	"local/gintest/services/db"
-	"local/gintest/services/dbheap"
 	"local/gintest/wslogic"
 	"log"
 	"math"
@@ -191,7 +189,7 @@ func (t *DummyPIDTicker) Launch() {
 
 				// Log time
 			case <-logTicker.C:
-				t.log("The Dummy PID has ticked ", nTicks, " times during this period.\n\t\t\t\t\t\tTotal data reports: ", nReports)
+				//t.log("The Dummy PID has ticked ", nTicks, " times during this period.\n\t\t\t\t\t\tTotal data reports: ", nReports)
 				nTicks = 0
 
 				// Ticker signal, continue normal ticking
@@ -218,14 +216,16 @@ func (t *DummyPIDTicker) Launch() {
 }
 
 func standardTickHandler(data PidData) {
-	d, err := dbheap.GetSession()
-	if err != nil {
-		log.Println("Error getting session ", err)
-		return
-	}
-	defer d.Close()
-	err = d.ClientSession.InsertSamples(&db.DBSample{Pid: data.Index, Value: data.Value, Timestamp: data.LastUpdated})
-	if err != nil {
-		log.Println("Error inserting sample ", err)
-	}
+	/*
+		d, err := dbheap.GetSession()
+		if err != nil {
+			log.Println("Error getting session ", err)
+			return
+		}
+		defer d.Close()
+		err = d.ClientSession.InsertSamples(&db.DBSample{Pid: data.Index, Value: data.Value, Timestamp: data.LastUpdated})
+		if err != nil {
+			log.Println("Error inserting sample ", err)
+		}
+	*/
 }

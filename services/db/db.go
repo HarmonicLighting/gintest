@@ -2,11 +2,11 @@ package db
 
 import (
 	"errors"
-	"io"
 	"log"
 	"time"
 
 	"github.com/globalsign/mgo"
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -14,7 +14,21 @@ const (
 	dbName       = "gintest"
 	samplesCName = "samples"
 	pidsCName    = "pids"
+	usersCName   = "users"
 )
+
+var usersIndex = mgo.Index{
+	Key:        []string{"username"},
+	Unique:     true,
+	DropDups:   false,
+	Background: false,
+	Sparse:     true,
+}
+
+type DBUser struct {
+	Username       string
+	HashedPassword string
+}
 
 type DBSample struct {
 	Pid       int
@@ -38,7 +52,7 @@ type DB struct {
 	db       *mgo.Database
 	samplesC *mgo.Collection
 	pidsC    *mgo.Collection
-	logger   *log.Logger
+	usersC   *mgo.Collection
 	ok       bool
 }
 
@@ -72,8 +86,15 @@ func (d *DB) setup(session *mgo.Session) (*DB, error) {
 	db := session.DB(dbName)
 	samplesC := db.C(samplesCName)
 	pidsC := db.C(pidsCName)
-	logger := d.logger
-	return &DB{session: session, db: db, samplesC: samplesC, pidsC: pidsC, logger: logger, ok: true}, nil
+	usersC := db.C(usersCName)
+	return &DB{
+		session:  session,
+		db:       db,
+		samplesC: samplesC,
+		pidsC:    pidsC,
+		usersC:   usersC,
+		ok:       true,
+	}, nil
 }
 
 func (d *DB) InsertSamples(samples ...*DBSample) error {
@@ -96,7 +117,23 @@ func (d *DB) InsertSamples(samples ...*DBSample) error {
 func (d *DB) InsertPids(pids DBPids) error {
 	err := d.pidsC.Insert(&pids)
 	if err != nil {
-		d.logger.Println("Error inserting PIDS: ", err)
+		log.Println("Error inserting PIDS: ", err)
+	}
+	return err
+}
+
+func (d *DB) InsertUser(user DBUser) error {
+	err := d.usersC.Insert(&user)
+	if err != nil {
+		log.Println("Error inserting User: ", err)
+	}
+	return err
+}
+
+func (d *DB) GetUser(username string, data *DBUser) error {
+	err := d.usersC.Find(bson.M{"username": username}).One(data)
+	if err != nil {
+		log.Println("Error Getting User: ", err)
 	}
 	return err
 }
@@ -111,9 +148,20 @@ func Dial() (*DB, error) {
 
 	samplesC := db.C(samplesCName)
 	pidsC := db.C(pidsCName)
-	var infoHandle io.Writer
-	logger := log.New(infoHandle, "<<DB Struct>> ", log.Ldate|log.Ltime|log.Lshortfile)
-	return &DB{session: session, db: db, samplesC: samplesC, pidsC: pidsC, logger: logger, ok: true}, nil
+	usersC := db.C(usersCName)
+	err = usersC.EnsureIndex(usersIndex)
+	if err != nil {
+		panic(err)
+	}
+
+	return &DB{
+		session:  session,
+		db:       db,
+		samplesC: samplesC,
+		pidsC:    pidsC,
+		usersC:   usersC,
+		ok:       true,
+	}, nil
 }
 
 func init() {

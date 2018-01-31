@@ -4,7 +4,9 @@ import (
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 
+	"local/gintest/controllers/user"
 	"local/gintest/controllers/ws"
+	"local/gintest/middleware/jwt"
 	"local/gintest/services/pid"
 	"local/gintest/wslogic"
 )
@@ -23,9 +25,25 @@ func main() {
 	})
 
 	r.GET("/ws", func(c *gin.Context) {
-		//wshandler(c.Writer, c.Request)
-		controllers.ServeWs(c.Writer, c.Request)
+		ws.ServeWs(c.Writer, c.Request)
 	})
+
+	r.POST("/register", func(c *gin.Context) {
+		user.Register(c.Writer, c.Request)
+	})
+
+	r.POST("/login", jwt.GetInstance().LoginHandler)
+
+	auth := r.Group("/auth")
+	//auth.Use(jwt.GetInstance().MiddlewareFunc()){
+	//	auth.GET("/hello",helloHandler)
+	//	auth.GET("/refresh_token", authMiddleware.RefreshHandler)
+	//}
+	auth.Use(jwt.GetInstance().MiddlewareFunc())
+	{
+		auth.GET("/hello", jwt.HelloHandler)
+		auth.GET("/refresh_token", jwt.GetInstance().RefreshHandler)
+	}
 
 	r.Run("localhost:2021")
 }

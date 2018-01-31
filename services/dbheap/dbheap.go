@@ -7,7 +7,7 @@ import (
 	"local/gintest/services/db"
 )
 
-const nConcurrentSessions = 10
+const nConcurrentSessions = 50
 
 var globalDBHeap *DbHeap
 
