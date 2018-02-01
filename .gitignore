@@ -1,3 +1,5 @@
 /main
 /gintest.exe
 *.exe
+/.eslintrc.json
+/.vscode

@@ -17,10 +17,25 @@
         <h3>Last Update message refreshed</h3>
         <h5><span id='lastSignalUpdate'>0</span> Signals (<span id="totalSignals"></span> in total)</h5>
         <h5>There are currently <b><span id='connectedClients'>0</span></b> clients connected on this server.</h5>
+        <div id="loginToken"></div>
       </div>
   </div>
   <div class="container">
-      <!-- Example row of columns -->
+      <div class="row">
+        <div class="col-sm-3">
+          <input class="form-control" type="text" placeholder="User" id="User"/>
+        </div>
+        <div class="col-sm-3">
+          <input class="form-control" type="password" placeholder="Password" id="Password"/>
+        </div>
+        <div class="col-sm-2">
+          <button class="btn btn-primary" id="loginBtn">Log In</button>
+        </div>
+        <div class="col-sm-4">
+          <div id="loginStatus"></div>
+          <div id="loginTokenExpiration"></div>
+        </div>
+      </div>
       <div class="row">
         <h2>Signal Streaming Data</h2>
       </div>

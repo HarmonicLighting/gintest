@@ -24,25 +24,24 @@ func main() {
 		c.HTML(200, "index.html", nil)
 	})
 
-	r.GET("/ws", func(c *gin.Context) {
-		ws.ServeWs(c.Writer, c.Request)
-	})
+	r.GET(
+		"/ws",
+		jwt.GetQInstance().MiddlewareFunc(),
+		ws.ServeWs,
+	)
 
 	r.POST("/register", func(c *gin.Context) {
 		user.Register(c.Writer, c.Request)
 	})
 
-	r.POST("/login", jwt.GetInstance().LoginHandler)
+	r.POST("/login", jwt.GetHInstance().LoginHandler)
 
 	auth := r.Group("/auth")
-	//auth.Use(jwt.GetInstance().MiddlewareFunc()){
-	//	auth.GET("/hello",helloHandler)
-	//	auth.GET("/refresh_token", authMiddleware.RefreshHandler)
-	//}
-	auth.Use(jwt.GetInstance().MiddlewareFunc())
+
+	auth.Use(jwt.GetHInstance().MiddlewareFunc())
 	{
 		auth.GET("/hello", jwt.HelloHandler)
-		auth.GET("/refresh_token", jwt.GetInstance().RefreshHandler)
+		auth.GET("/refresh_token", jwt.GetHInstance().RefreshHandler)
 	}
 
 	r.Run("localhost:2021")
